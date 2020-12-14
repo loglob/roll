@@ -43,6 +43,7 @@ int main(int argc, char **argv)
 						" Mode arguments:\n"
 						"	-r[n=1]  Simulates a dice expression n times.\n"
 						"	-p       Prints a histogram for a dice expression.\n"
+						"	-ps      Prints a short overview for a dice expression, instead of a full histogram.\n"
 						"	-c[v]    Compares a dice expression to a number.\n"
 						"These modes are applied to all following dice, until another mode is specified.\n"
 						"The default mode is -p\n"
@@ -115,9 +116,13 @@ int main(int argc, char **argv)
 
 				case 'p':
 				case 'P':
-					if(argv[i][2])
+					if(argv[i][2] == 's' && !argv[i][3])
+						settings.concise = true;
+					else if(argv[i][2])
 						goto bad_arg;
-
+					else
+						settings.concise = false;
+					
 					settings.mode = PREDICT;
 				continue;
 

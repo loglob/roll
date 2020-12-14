@@ -166,7 +166,9 @@ void p_print(struct prob p)
 	}
 	
 	printf("Avg: %f\tVariance: %f\tSigma: %f\n", avg, var, sqrt(var));
-	p_plot(p);
+
+	if(!settings.concise)
+		p_plot(p);
 }
 
 /* Plots p's compare mode */

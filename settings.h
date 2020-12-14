@@ -10,7 +10,7 @@ struct
 		COMPARE,
 	} mode;
 	int rolls;
-	bool debug, verbose;
+	bool debug, verbose, concise;
 
 	double cutoff;
 	bool dynamicCutoff;
