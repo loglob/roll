@@ -487,3 +487,24 @@ struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 	free(v);
 	return c;
 }
+
+/* stack-allocated p_constant() */
+#define P_CONST(x) (struct prob){ .low = x, .len = 1, .p = (double[]){ 1.0 } }
+
+struct prob p_explodes(struct prob p)
+{
+	assert(p.len > 1);
+
+	struct prob exp = p_add(p, P_CONST(p.low + p.len - 1));
+	struct prob imp = p_adds(p_constant(p.low), p_negs(p_dup(p)));
+	double Pmin = p.p[0];
+	double Pmax = p.p[p.len - 1];
+	
+	// trim out min & max
+	p.len -= 2;
+	p.low++;
+	memmove(p.p, p.p + 1, p.len * sizeof(double));
+	p.p = explain_realloc_or_die(p.p, p.len * sizeof(double));
+
+	return p_merges(p_merges(p, exp, Pmax), imp, Pmin);
+}

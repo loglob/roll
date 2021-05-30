@@ -42,6 +42,9 @@ p_t translate(d_t *d)
 		case '\\':
 			return p_sans(translate(d->reroll.v), d->reroll.count, d->reroll.ls);
 
+		case '!':
+			return p_explodes(translate(d->unop));
+
 		default:
 			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
 	}
@@ -74,6 +77,11 @@ void d_print(d_t *d)
 			d_print(d->biop.l);
 			printf(" %c ", d->op);
 			d_print(d->biop.r);
+		break;
+
+		case '!':
+			d_print(d->unop);
+			putchar('!');
 		break;
 		
 		case '^':
@@ -121,6 +129,11 @@ void d_printTree(struct dieexpr *d, int depth)
 
 		case '(':
 			printf("PARENTHESIZED\n");
+			d_printTree(d->unop, depth + 1);
+		break;
+
+		case '!':
+			printf("EXPLODING DICE\n");
 			d_printTree(d->unop, depth + 1);
 		break;
 

@@ -2,6 +2,7 @@
 #pragma once
 #include "parse.h"
 #include "settings.h"
+#include "d_range.h"
 
 /* Generates a random number in [1..pips] (uniform) */
 static inline int roll(int pips)
@@ -134,7 +135,34 @@ int sim(struct dieexpr *d)
 		{
 			return d->constant;	
 		};
-		
+
+		case '!':
+		{
+			rl_t r = d_range(d->unop);
+			int r1 = sim(d->unop);
+
+			if(r1 == r.high)
+			{
+				int r2 = sim(d->unop);
+
+				if(settings.verbose)
+					printf("Rolled a %d which exploded to %d\n", r1, r1 + r2);
+
+				return r1 + r2;
+			}
+			else if(r1 == r.low)
+			{
+				int r2 = sim(d->unop);
+
+				if(settings.verbose)
+					printf("Rolled a %d which imploded to %d\n", r1, r1 - r2);
+
+				return r1 - r2;
+			}
+			else
+				return r1;
+		}
+
 		default:
 			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
 	}

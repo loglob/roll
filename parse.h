@@ -11,9 +11,11 @@ expr := INT
 	| expr - expr
 	| expr '*' expr
 	| expr 'x' expr
+	| expr !
 	| expr ^ INT / INT
 	| expr _ INT / INT
 	| expr ~ intls
+	| expr \ intls
 	| ( expr )
 ;
 */
@@ -30,7 +32,7 @@ expr := INT
 #define BIOPS "+-*x/"
 #define SELECT "^_"
 #define REROLLS "~\\"
-#define UOPS SELECT REROLLS
+#define UOPS SELECT REROLLS "!"
 #define SPECIAL BIOPS UOPS "d,/()"
 
 /* represents the state of the lexer */
@@ -308,6 +310,10 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 
 				left = d_clone((struct dieexpr){ .op = op, .select= { .v = left, .of = of, .sel = sel } });
 			}
+			continue;
+
+			case '!':
+				left = d_clone((struct dieexpr){ .op = op, .unop = left });
 			continue;
 
 			case '\\':
