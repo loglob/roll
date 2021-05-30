@@ -119,11 +119,11 @@ int sim(struct dieexpr *d)
 
 			int sum = sumls(buf, rolls);
 
-			if(settings.verbose)
+			if(settings.verbose && rolls > 1)
 			{
 				//printf("Rolled ");
 				prlsd(buf, rolls, " + ");
-				printf(" = %u\n", sum);
+				printf(" = %d\n", sum);
 			}
 
 			free(buf);
