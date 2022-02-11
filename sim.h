@@ -48,11 +48,36 @@ int sim(struct dieexpr *d)
 
 				if(settings.verbose)
 					printf("Rolled %d after coalescing %d\n", r2, r1);
-				
+
 				return r2;
 			}
 
 			return r1;
+		}
+
+		case ':':
+		{
+			int r1 = sim(d->ternary.cond);
+
+			if(r1 > 0)
+			{
+				int r2 = sim(d->ternary.then);
+
+				if(settings.verbose)
+					printf("Rolled %d for ternary condition resulting in %d from true branch\n", r1, r2);
+
+				return r2;
+			}
+			else
+			{
+				int r2 = sim(d->ternary.otherwise);
+
+				if(settings.verbose)
+					printf("Rolled %d for ternary condition resulting in %d from false branch\n", r1, r2);
+
+				return r2;
+			}
+
 		}
 
 		case '(':
@@ -65,11 +90,11 @@ int sim(struct dieexpr *d)
 
 			for (int i = 0; i < d->select.of; i++)
 				buf[i] = sim(d->select.v);
-			
+
 			qsort(buf, d->select.of, sizeof(int), intpcomp);
 			int *selbuf = buf + ((d->op == '_') ? 0 : (d->select.of - d->select.sel));
 			int sum = sumls(selbuf, d->select.sel);
-			
+
 			if(settings.verbose)
 			{
 				printf("Got ");
@@ -97,7 +122,7 @@ int sim(struct dieexpr *d)
 
 				if(settings.verbose)
 					printf("Rolled %d after discarding %d\n", r2, r1);
-				
+
 				return r2;
 			}
 
@@ -112,7 +137,7 @@ int sim(struct dieexpr *d)
 			{
 				if(settings.verbose)
 					printf("Discarded %d\n", r);
-				
+
 				r = sim(d->reroll.v);
 			}
 
@@ -125,15 +150,15 @@ int sim(struct dieexpr *d)
 
 			if(settings.verbose)
 				printf("Rolled a %d on a d%u\n", r, d->constant);
-	
+
 			return r;
 		}
-		
+
 		case 'x':
 		{
 			int rolls = sim(d->biop.l);
 			int *buf = xcalloc(sizeof(int), rolls);
-			
+
 			for (int i = 0; i < rolls; i++)
 				buf[i] = sim(d->biop.r);
 
@@ -152,7 +177,7 @@ int sim(struct dieexpr *d)
 
 		case INT:
 		{
-			return d->constant;	
+			return d->constant;
 		};
 
 		case '!':

@@ -31,11 +31,11 @@ static unsigned int hcol()
 
 	if(env)
 		return strtoui(env, NULL, 10);
-	
+
 	struct winsize w;
 	if(!ioctl(STDOUT_FILENO, TIOCGWINSZ, &w))
 		return w.ws_col;
-	
+
 	return 200;
 }
 
@@ -47,7 +47,7 @@ static bool d_boolean(d_t *d)
 		case '<':
 		case '>':
 			return true;
-		
+
 		default:
 			return false;
 	}
@@ -73,7 +73,7 @@ static struct plotinfo plot_init(const char *preamble, int prlen, double pmax)
 	};
 
 	double pfact = pow(10, settings.precision);
-	
+
 	pi.floatlen = numw((int)floor(round(pmax * 100 * pfact) / pfact));
 
 	int plotarea = hcol()
@@ -104,7 +104,7 @@ static void plot_row(struct plotinfo pi, double p, ...)
 {
 	va_list l;
 	va_start(l, p);
-	
+
 	if(!settings.globalCutoff || p > pi.cutoff)
 	{
 		int prlen = vprintf(pi.preamble, l);
@@ -114,7 +114,7 @@ static void plot_row(struct plotinfo pi, double p, ...)
 			settings.precision, 100 * p);
 
 		int barlen = (int)round(pi.scaling * p);
-		
+
 		for (int i = 0; i < barlen; i++)
 			putchar('#');
 
@@ -169,16 +169,16 @@ void p_print(struct prob p)
 {
 	double avg = 0.0;
 	double var = 0.0;
-	
+
 	for (int i = 0; i < p.len; i++)
 		avg += p.p[i] * (i + p.low);
-	
+
 	for (int i = 0; i < p.len; i++)
 	{
 		double d = (i + p.low) - avg;
 		var += d * d * p.p[i];
 	}
-	
+
 	printf("Avg: %f\tVariance: %f\tSigma: %f\n", avg, var, sqrt(var));
 
 	if(!settings.concise)
@@ -190,7 +190,7 @@ void p_printB(struct prob p)
 	const char *strs[] = { "false", "true" };
 	bool isConst = p.len == 1;
 	struct plotinfo pi = plot_init("%s", 5, isConst ? 1.0 : p.p[p.p[0] < p.p[1]]);
-	
+
 	for (int i = 0; i <= 1; i++)
 		plot_row(pi, isConst ? p.low == i : p.p[i], strs[i]);
 }
@@ -214,7 +214,7 @@ void p_comp(struct prob p)
 	cpr[0] = cpr[1] + cpr[2];
 	cpr[4] = cpr[3] + cpr[2];
 	double pmax = (cpr[0] > cpr[4]) ? cpr[0] : cpr[4];
-	
+
 	struct plotinfo pi = plot_init("%s%d", 3 + numw(settings.compareValue), pmax);
 
 	for (int i = 0; i < 5; i++)

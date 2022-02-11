@@ -69,6 +69,7 @@ int main(int argc, char **argv)
 						"	D>D        Rolls on both dice, then checks if left is larger than right.\n"
 						"	D<D        Rolls on both dice, then checks if left is smaller than right.\n"
 						"	D?D        Rolls on the left die and, if the result is less than 1, replaces it with the right die.\n"
+						"	D?D:D      Rolls on the leftmost die, and returns the middle die if the result was greater than 0, and the rightmost die otherwise.\n"
 						"	(D)        The same as D, used for enforcing operator association.\n"
 						"Where n represents an unsigned number, and D represents another die.\n"
 						"Operator precedence is as shown.\n"
@@ -117,7 +118,7 @@ int main(int argc, char **argv)
 				case 'V':
 					if(argv[i][2])
 						goto bad_arg;
-						
+
 					settings.verbose = true;
 				continue;
 
@@ -129,7 +130,7 @@ int main(int argc, char **argv)
 						goto bad_arg;
 					else
 						settings.concise = false;
-					
+
 					settings.mode = PREDICT;
 				continue;
 
@@ -206,7 +207,7 @@ int main(int argc, char **argv)
 				return EXIT_FAILURE;
 			}
 		}
-		
+
 		struct dieexpr *d = parse(argv[i]);
 
 		if(settings.debug)
@@ -220,13 +221,13 @@ int main(int argc, char **argv)
 
 				for (int i = 0; i < settings.rolls; i++)
 					buf[i] = sim(d);
-				
+
 				printf("%u * ", settings.rolls);
 				d_print(d);
 				printf(": ");
 				prls(buf, settings.rolls);
 				putchar('\n');
-				
+
 				free(buf);
 			}
 			break;
@@ -262,5 +263,5 @@ int main(int argc, char **argv)
 
 		d_free(d);
 	}
-	
+
 }

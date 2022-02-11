@@ -25,17 +25,17 @@ p_t translate(d_t *d)
 
 		case '+':
 			return p_adds(translate(d->biop.l), translate(d->biop.r));
-		
+
 		case '/':
 			return p_cdiv(translate(d->biop.l), translate(d->biop.r));
 
 		case '-':
 			return p_adds(translate(d->biop.l), p_negs(translate(d->biop.r)));
-		
+
 		case '^':
 		case '_':
 			return p_select(translate(d->select.v), d->select.sel, d->select.of, d->op == '^');
-			
+
 		case '~':
 			return p_rerolls(translate(d->reroll.v), d->reroll.count, d->reroll.ls);
 
@@ -52,6 +52,9 @@ p_t translate(d_t *d)
 
 		case '?':
 			return p_coalesces(translate(d->biop.l), translate(d->biop.r));
+
+		case ':':
+			return p_terns(translate(d->ternary.cond), translate(d->ternary.then), translate(d->ternary.otherwise));
 
 		default:
 			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
@@ -92,7 +95,7 @@ void d_print(d_t *d)
 			d_print(d->unop);
 			putchar('!');
 		break;
-		
+
 		case '>':
 		case '<':
 			putchar('(');
@@ -107,12 +110,22 @@ void d_print(d_t *d)
 			d_print(d->select.v);
 			printf(" ^%u/%u", d->select.sel, d->select.of);
 		break;
-			
+
 		case '~':
 		case '\\':
 			d_print(d->select.v);
 			printf(" %c", d->op);
 			prls(d->reroll.ls, d->reroll.count);
+		break;
+
+		case ':':
+			putchar('(');
+			d_print(d->ternary.cond);
+			printf(" ? ");
+			d_print(d->ternary.then);
+			printf(" : ");
+			d_print(d->ternary.otherwise);
+			putchar(')');
 		break;
 
 		case '(':
@@ -167,6 +180,13 @@ void d_printTree(struct dieexpr *d, int depth)
 		b('*', "CACHED MUL")
 		b('/', "CACHED DIV")
 
+		case ':':
+			printf("TERNARY OPERATOR\n");
+			d_printTree(d->ternary.cond, depth + 1);
+			d_printTree(d->ternary.then, depth + 1);
+			d_printTree(d->ternary.otherwise, depth + 1);
+		break;
+
 		case '^':
 			printf("SELECT %u HIGHEST FROM %u\n", d->select.sel, d->select.of);
 			d_printTree(d->select.v, depth + 1);
@@ -180,7 +200,7 @@ void d_printTree(struct dieexpr *d, int depth)
 		case '\\':
 			printf("IGNORE ANY OF ");
 		goto print_rerolls;
-		
+
 		case '~':
 			printf("REROLL ANY OF ");
 		print_rerolls:

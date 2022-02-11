@@ -14,7 +14,7 @@
 	(3) p[len - 1] > 0 */
 typedef struct prob
 {
-	// the lowest 
+	// the lowest
 	signed int low;
 	// the length of p
 	int len;
@@ -33,10 +33,10 @@ static bool combinations(int max, int n, int ind[n])
 
 	for (i = n - 1; i && ind[i] == ind[i-1]; i--)
 		ind[i] = 0;
-	
+
 	ind[i]++;
 	ind[i] %= max;
-	
+
 	return i || *ind;
 }
 
@@ -61,7 +61,7 @@ static double permutations(int n, int ind[n])
 	}
 
 	div *= runlen + 1;
-	
+
 	return nFact / div;
 }
 
@@ -86,14 +86,14 @@ int *chooseBuf(int N)
 	for (int n = 3; n <= N; n++)
 	{
 		cur[0] = last[0] + 1;
-	
+
 		for (int k = 1; k < n / 2; k++)
 			cur[k] = last[k-1] + (k == (n-1)/2 ? last[k-1] : last[k]);
 
 		int *swap = cur;
 		cur = last;
 		last = swap;
-	}	
+	}
 
 	int m = (N-1)/2;
 	for (int i = 0; i < m; i++)
@@ -119,7 +119,7 @@ struct prob p_uniform(int n)
 
 	for (int i = 0; i < n; i++)
 		p[i] = 1.0 / n;
-	
+
 	return (struct prob){
 		.len = n,
 		.low = 1,
@@ -138,7 +138,7 @@ struct prob p_negs(struct prob p)
 		*l = *r;
 		*r = v;
 	}
-	
+
 	p.low = -(p.low + p.len - 1);
 	return p;
 }
@@ -152,7 +152,7 @@ struct prob p_dup(struct prob p)
 	return (struct prob){
 		.len = p.len,
 		.low = p.low,
-		.p = pp			
+		.p = pp
 	};
 }
 
@@ -195,7 +195,7 @@ struct prob p_rerolls(struct prob p, int n, int rr[n])
 
 	for (int i = 0; i < p.len; i++)
 		p.p[i] *= !in(n, rr, p.low + i) + prr;
-	
+
 	return p;
 }
 
@@ -228,7 +228,7 @@ struct prob p_sans(struct prob p, int n, int rr[n])
 
 	for (int i = 0; i < p.len; i++)
 		p.p[i] *= !in(n, rr, p.low + i) / (1 - prr);
-	
+
 	if(start)
 	{
 		p.low += start;
@@ -257,11 +257,11 @@ struct prob p_add(struct prob l, struct prob r)
 	for (int i = 0; i < l.len; i++)
 		for (int j = 0; j < r.len; j++)
 			p[i + j] += l.p[i] * r.p[j];
-		
+
 	return (struct prob){
 		.len = len,
 		.low = low,
-		.p = p			
+		.p = p
 	};
 }
 
@@ -287,7 +287,7 @@ struct prob p_cmul(struct prob l, struct prob r)
 	for (int i = 0; i < l.len; i++)
 		for (int j = 0; j < r.len; j++)
 			p[(i + l.low) * (j + r.low) - res.low] += l.p[i] * r.p[j];
-	
+
 	return (struct prob){ .low = res.low, .len = res.len, .p = p };
 }
 
@@ -377,13 +377,15 @@ struct prob p_mulks(struct prob p, signed int x)
 
 	if(r.p != p.p)
 		p_free(p);
-		
+
 	return r;
 }
 
 /* adds l onto r*q */
 struct prob p_merges(struct prob l, struct prob r, double q)
 {
+	assert(q > 0);
+
 	int low = min(l.low, r.low);
 	int high = max(l.low + l.len, r.low + r.len) - 1;
 	int len = high - low + 1;
@@ -394,7 +396,7 @@ struct prob p_merges(struct prob l, struct prob r, double q)
 		p[i + l.low - low] = l.p[i];
 	for (int i = 0; i < r.len; i++)
 		p[i + r.low - low] += r.p[i] * q;
-	
+
 	p_free(l);
 
 	if(l.p != r.p)
@@ -415,10 +417,10 @@ struct prob p_muls(struct prob l, struct prob r)
 	}
 
 	p_free(l);
-	
+
 	if(l.p != r.p)
 		p_free(r);
-	
+
 	return sum;
 }
 
@@ -435,19 +437,19 @@ struct prob p_selectOne(struct prob p, int of, bool selHigh)
 
 	for (int i = 1; i < p.len; i++)
 		sum[i] = p.p[i] + sum[i - 1];
-	
+
 	for (int i = 0; i < p.len; i++)
 	{
 		// probability of a value being smaller / larger than i.
 		double plti = selHigh ? (i ? sum[i - 1] : 0.0) : (1.0 - sum[i]);
 		double px = pow(p.p[i], of);
-		
+
 		for (int j = 1; j < of; j++)
 			px += pow(p.p[i], j) * pow(plti, of - j) * c[j-1];
-		
+
 		p.p[i] = px;
 	}
-	
+
 	free(sum);
 	free(c);
 
@@ -463,7 +465,7 @@ struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 	// Use the MUCH faster selectOne algorithm (O(n) vs O(n!)
 	if(sel == 1)
 		return p_selectOne(p, of, selHigh);
-	
+
 	int *v = xcalloc(of, sizeof(int));
 	struct prob c = (struct prob){ .len = (p.len-1) * sel + 1, .low = sel };
 	c.p = xcalloc(c.len, sizeof(double));
@@ -476,11 +478,11 @@ struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 		for (int i = 0; i < of; i++)
 		{
 			q *= p.p[v[i]];
-			
+
 			if(selHigh ? (i < sel) : (i >= of - sel))
 				sum += v[i];
 		}
-		
+
 		c.p[sum] += q;
 	} while(combinations(p.len, of, v));
 
@@ -518,7 +520,7 @@ struct prob p_explodes(struct prob p)
 	struct prob imp = p_adds(p_constant(p.low), p_negs(p_dup(p)));
 	double Pmin = p.p[0];
 	double Pmax = p.p[p.len - 1];
-	
+
 	// trim out min & max
 	p.len -= 2;
 	p.low++;
@@ -574,7 +576,7 @@ double p_true(struct prob x)
 
 	for (int i = (x.low <= 0) ? -x.low+1 : 0; i < x.len; i++)
 		prob += x.p[i];
-	
+
 	return prob;
 }
 
@@ -596,4 +598,36 @@ struct prob p_coalesces(struct prob l, struct prob r)
 
 	double p = p_true(l);
 	return p_merges(p_cuts(l, i, 0), r, 1 - p);
+}
+
+/** Multiplies every probability of p by k.
+ * 	Ignores axiom (1).
+ */
+struct prob p_scales(struct prob p, double k)
+{
+	assert(k > 0);
+
+	for (int i = 0; i < p.len; i++)
+		p.p[i] *= k;
+
+	return p;
+}
+
+struct prob p_terns(struct prob cond, struct prob then, struct prob otherwise)
+{
+	double p = p_true(cond);
+	p_free(cond);
+
+	if(p == 0.0)
+	{
+		p_free(then);
+		return otherwise;
+	}
+	if(p == 1.0)
+	{
+		p_free(otherwise);
+		return then;
+	}
+
+	return p_merges(p_scales(then, p), otherwise, 1 - p);
 }

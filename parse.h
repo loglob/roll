@@ -1,7 +1,7 @@
 /* Parses the language:
 !! INT 'd' INT... is expanded to INT x d INT...
 	this allows i.e. 2d20~1 to be interpreted as the more sensible 2*(1d20~1) instead of (2d20)~1
- 
+
 intls := INT
 	| intls , INT
 ;
@@ -33,7 +33,7 @@ expr := INT
 #define SELECT "^_"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!"
-#define SPECIAL BIOPS UOPS "d,/()?"
+#define SPECIAL BIOPS UOPS "d,/()?:"
 
 /* represents the state of the lexer */
 typedef struct lexstate
@@ -50,6 +50,8 @@ typedef struct dieexpr
 	char op;
 	union
 	{
+		// valid if op == ':'
+		struct { struct dieexpr *cond, *then, *otherwise; } ternary;
 		// valid if op in BIOPS
 		struct { struct dieexpr *l, *r; } biop;
 		// valid if op in SELECT
@@ -94,14 +96,14 @@ static void _unexptk(ls_t ls, char first, ...)
 	{
 		if(cur != first)
 			fprintf(stderr, (next == -1) ? " or " : ", ");
-	
+
 		_printtk(cur);
 		cur = next;
-	
+
 		if(next != -1)
 			next = va_arg(vl, int);
 	}
-	
+
 	fprintf(stderr, ".\n");
 	va_end(vl);
 	exit(EXIT_FAILURE);
@@ -122,7 +124,7 @@ static void _unexptk(ls_t ls, char first, ...)
 static char _lex(struct lexstate *ls)
 {
 	char i;
-	
+
 	if(ls->unlex)
 	{
 		ls->unlex = false;
@@ -144,7 +146,7 @@ static char _lex(struct lexstate *ls)
 		// only ERANGE is possible
 		if(errno)
 			lerr(*ls, "Integer value too large.\n");
-		
+
 		return ls->last = INT;
 	}
 	if(!i)
@@ -162,10 +164,10 @@ static char _lex(struct lexstate *ls)
 static int _lexc(struct lexstate *ls, char c)
 {
 	char got = _lex(ls);
-	
+
 	if(got != c)
 		lbadtk(*ls, c);
-		
+
 	return ls->num;
 }
 
@@ -173,7 +175,7 @@ static void _unlex(struct lexstate *ls)
 {
 	if(ls->unlex)
 		eprintf("Parsing failed: Double unlex\n");
-	
+
 	ls->unlex = true;
 }
 
@@ -270,7 +272,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 					unlex();
 			}
 			break;
-		
+
 			case 'd':
 			{
 				int pips = lexc(INT);
@@ -289,7 +291,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				badtk(INT, 'd', '(');
 		}
 	}
-	
+
 	for(;;)
 	{
 		char op;
@@ -309,7 +311,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				}
 				else
 					of = lexc(INT);
-				
+
 				if(sel <= 0 || of <= 0 || sel >= of)
 					err("Invalid selection values.");
 
@@ -346,7 +348,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 						break;
 					}
 				} while (lex() == ',');
-				
+
 				left = d_clone((struct dieexpr){ .op = op, .reroll = { .v = left, .ls = v, .count = len } });
 				unlex();
 			}
@@ -384,6 +386,21 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 			}
 			continue;
 
+			case ':':
+			{
+				if(left->op != '?')
+					goto got_bad_tk;
+
+				d_t *c = left->biop.l;
+				d_t *t = left->biop.r;
+
+				left->op = ':';
+				left->ternary.cond = c;
+				left->ternary.then = t;
+				left->ternary.otherwise = _parse_pexpr(NULL, ls);
+			}
+			continue;
+
 			case NUL:
 				return left;
 
@@ -395,6 +412,7 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 				}
 			// fallthrough
 			default:
+				got_bad_tk:
 				if(ls->pdepth)
 					badtk('+', '-', '*', 'x', '^', '_', '~', ')', NUL);
 				else
@@ -432,7 +450,7 @@ void d_free(struct dieexpr *d)
 		d_free(d->reroll.v);
 		free(d->reroll.ls);
 	}
-	
+
 	free(d);
 }
 
