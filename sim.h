@@ -29,6 +29,8 @@ int sim(struct dieexpr *d)
 			if(settings.verbose) printf("%d %c %d = %d\n", l, c, r, res); \
 			return res; }
 
+		biop('<', <)
+		biop('>', >)
 		biop('+', +)
 		biop('-', -)
 		biop('*', *)

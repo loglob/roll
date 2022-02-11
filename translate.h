@@ -45,6 +45,11 @@ p_t translate(d_t *d)
 		case '!':
 			return p_explodes(translate(d->unop));
 
+		case '<':
+			return p_less(translate(d->biop.l), translate(d->biop.r));
+		case '>':
+			return p_less(translate(d->biop.r), translate(d->biop.l));
+
 		default:
 			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
 	}
@@ -84,6 +89,15 @@ void d_print(d_t *d)
 			putchar('!');
 		break;
 		
+		case '>':
+		case '<':
+			putchar('(');
+			d_print(d->biop.l);
+			printf(") %c (", d->op);
+			d_print(d->biop.r);
+			putchar(')');
+		break;
+
 		case '^':
 		case '_':
 			d_print(d->select.v);
@@ -136,6 +150,10 @@ void d_printTree(struct dieexpr *d, int depth)
 			printf("EXPLODING DICE\n");
 			d_printTree(d->unop, depth + 1);
 		break;
+
+
+		b('>', "GREATER THAN")
+		b('<', "LESS THAN")
 
 		b('+', "ADD")
 		b('-', "SUB")

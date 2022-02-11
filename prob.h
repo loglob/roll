@@ -508,3 +508,37 @@ struct prob p_explodes(struct prob p)
 
 	return p_merges(p_merges(p, exp, Pmax), imp, Pmin);
 }
+
+/* P(l < r) */
+struct prob p_less(struct prob l, struct prob r)
+{
+	double prob = 0.0;
+
+	for (int i = 0; i < l.len; i++)
+	{
+		// P(l > r[i])
+		double pgt = 0;
+		// equivalent index in r
+		int j = i + 1 + l.low - r.low;
+
+		for (; j < r.len; j++)
+		{
+			if(j >= 0)
+				pgt += r.p[j];
+		}
+
+		prob += l.p[i] * pgt;
+	}
+
+	if(prob == 0)
+		return p_constant(0);
+	else if(prob == 1)
+		return p_constant(1);
+	else
+	{
+		struct prob p = (struct prob){ .len = 2, .low = 0, .p = explain_malloc_or_die(2 * sizeof(double)) };
+		p.p[1] = prob;
+		p.p[0] = 1 - p.p[1];
+		return p;
+	}
+}

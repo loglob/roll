@@ -29,7 +29,7 @@ expr := INT
 
 #define NUL ((char)0)
 #define INT ((char)-2)
-#define BIOPS "+-*x/"
+#define BIOPS "+-*x/<>"
 #define SELECT "^_"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!"
@@ -196,6 +196,9 @@ static int precedence(char op)
 {
 	switch(op)
 	{
+		case '<':
+		case '>':
+			return 10;
 		case '+':
 			return 5;
 		case '-':
@@ -370,6 +373,8 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 			case '*':
 			case 'x':
 			case '/':
+			case '<':
+			case '>':
 			{
 				char op = ls->last;
 				left = d_merge(left, op, _parse_pexpr(NULL, ls));

@@ -39,6 +39,20 @@ static unsigned int hcol()
 	return 200;
 }
 
+/* Determines if d is a boolean expression */
+static bool d_boolean(d_t *d)
+{
+	switch(d->op)
+	{
+		case '<':
+		case '>':
+			return true;
+		
+		default:
+			return false;
+	}
+}
+
 /* Determines the width of a number if printed in base10 */
 static inline int numw(signed int n)
 {
@@ -169,6 +183,16 @@ void p_print(struct prob p)
 
 	if(!settings.concise)
 		p_plot(p);
+}
+
+void p_printB(struct prob p)
+{
+	const char *strs[] = { "false", "true" };
+	bool isConst = p.len == 1;
+	struct plotinfo pi = plot_init("%s", 5, isConst ? 1.0 : p.p[p.p[0] < p.p[1]]);
+	
+	for (int i = 0; i <= 1; i++)
+		plot_row(pi, isConst ? p.low == i : p.p[i], strs[i]);
 }
 
 /* Plots p's compare mode */

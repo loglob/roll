@@ -65,6 +65,8 @@ int main(int argc, char **argv)
 						"	D/D        Rolls on both dice, then divides the results.\n"
 						"	D+D        Adds the results of two dice.\n"
 						"	D-D        Subtracts the results of two dice.\n"
+						"	D>D        Rolls on both dice, then checks if left is larger than right.\n"
+						"	D<D        Rolls on both dice, then checks if left is smaller than right.\n"
 						"	(D)        The same as D, used for enforcing operator association.\n"
 						"Where n represents an unsigned number, and D represents another die.\n"
 						"Operator precedence is as shown.\n"
@@ -237,7 +239,11 @@ int main(int argc, char **argv)
 				if(settings.debug)
 					p_debug(p);
 
-				p_print(p);
+				if(d_boolean(d))
+					p_printB(p);
+				else
+					p_print(p);
+
 				p_free(p);
 			}
 			break;
