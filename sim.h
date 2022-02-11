@@ -38,6 +38,23 @@ int sim(struct dieexpr *d)
 
 		#undef biop
 
+		case '?':
+		{
+			int r1 = sim(d->biop.l);
+
+			if(r1 <= 0)
+			{
+				int r2 = sim(d->biop.r);
+
+				if(settings.verbose)
+					printf("Rolled %d after coalescing %d\n", r2, r1);
+				
+				return r2;
+			}
+
+			return r1;
+		}
+
 		case '(':
 			return sim(d->unop);
 

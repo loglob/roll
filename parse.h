@@ -33,7 +33,7 @@ expr := INT
 #define SELECT "^_"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!"
-#define SPECIAL BIOPS UOPS "d,/()"
+#define SPECIAL BIOPS UOPS "d,/()?"
 
 /* represents the state of the lexer */
 typedef struct lexstate
@@ -54,7 +54,7 @@ typedef struct dieexpr
 		struct { struct dieexpr *l, *r; } biop;
 		// valid if op in SELECT
 		struct { struct dieexpr *v; int sel, of; } select;
-		// valid if op == '~'
+		// valid if op in REROLLS
 		struct { struct dieexpr *v; int *ls; int count;} reroll;
 		// valid if op in UOPS
 		struct dieexpr *unop;
@@ -196,6 +196,8 @@ static int precedence(char op)
 {
 	switch(op)
 	{
+		case '?':
+			return 20;
 		case '<':
 		case '>':
 			return 10;
@@ -375,6 +377,7 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 			case '/':
 			case '<':
 			case '>':
+			case '?':
 			{
 				char op = ls->last;
 				left = d_merge(left, op, _parse_pexpr(NULL, ls));

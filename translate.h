@@ -50,6 +50,9 @@ p_t translate(d_t *d)
 		case '>':
 			return p_less(translate(d->biop.r), translate(d->biop.l));
 
+		case '?':
+			return p_coalesces(translate(d->biop.l), translate(d->biop.r));
+
 		default:
 			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
 	}
@@ -79,6 +82,7 @@ void d_print(d_t *d)
 		case '*':
 		case '+':
 		case '/':
+		case '?':
 			d_print(d->biop.l);
 			printf(" %c ", d->op);
 			d_print(d->biop.r);
@@ -151,6 +155,8 @@ void d_printTree(struct dieexpr *d, int depth)
 			d_printTree(d->unop, depth + 1);
 		break;
 
+
+		b('?', "ZERO COALESCENCE")
 
 		b('>', "GREATER THAN")
 		b('<', "LESS THAN")

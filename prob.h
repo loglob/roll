@@ -488,6 +488,25 @@ struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 	return c;
 }
 
+/* Cuts l values from the left and r values from the right of the given probability array.
+	Restores axioms (2) and (3), ignoring (1). */
+struct prob p_cuts(struct prob p, int l, int r)
+{
+	for (; p.p[l] <= 0.0; l++)
+		;
+	for (; p.p[p.len - r - 1] <= 0.0; r++)
+		;
+
+	p.len -= l + r;
+	p.low += l;
+
+	assert(p.len > 0);
+	memmove(p.p, p.p + l, p.len);
+	p.p = realloc(p.p, p.len);
+
+	return p;
+}
+
 /* stack-allocated p_constant() */
 #define P_CONST(x) (struct prob){ .low = x, .len = 1, .p = (double[]){ 1.0 } }
 
@@ -507,6 +526,21 @@ struct prob p_explodes(struct prob p)
 	p.p = explain_realloc_or_die(p.p, p.len * sizeof(double));
 
 	return p_merges(p_merges(p, exp, Pmax), imp, Pmin);
+}
+
+struct prob p_bool(double prob)
+{
+	if(prob == 0)
+		return p_constant(0);
+	else if(prob == 1)
+		return p_constant(1);
+	else
+	{
+		struct prob p = (struct prob){ .len = 2, .low = 0, .p = explain_malloc_or_die(2 * sizeof(double)) };
+		p.p[1] = prob;
+		p.p[0] = 1 - p.p[1];
+		return p;
+	}
 }
 
 /* P(l < r) */
@@ -530,15 +564,36 @@ struct prob p_less(struct prob l, struct prob r)
 		prob += l.p[i] * pgt;
 	}
 
-	if(prob == 0)
-		return p_constant(0);
-	else if(prob == 1)
-		return p_constant(1);
-	else
+	return p_bool(prob);
+}
+
+/** Determines P(x > 0) */
+double p_true(struct prob x)
+{
+	double prob = 0;
+
+	for (int i = (x.low <= 0) ? -x.low+1 : 0; i < x.len; i++)
+		prob += x.p[i];
+	
+	return prob;
+}
+
+struct prob p_coalesces(struct prob l, struct prob r)
+{
+	if(l.low > 0)
 	{
-		struct prob p = (struct prob){ .len = 2, .low = 0, .p = explain_malloc_or_die(2 * sizeof(double)) };
-		p.p[1] = prob;
-		p.p[0] = 1 - p.p[1];
-		return p;
+		p_free(r);
+		return l;
 	}
+
+	int i = -l.low + 1;
+
+	if(i >= l.len)
+	{
+		p_free(l);
+		return r;
+	}
+
+	double p = p_true(l);
+	return p_merges(p_cuts(l, i, 0), r, 1 - p);
 }

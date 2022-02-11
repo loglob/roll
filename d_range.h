@@ -56,6 +56,24 @@ rl_t d_range(d_t *d)
 			return d_range(d->reroll.v);
 		}
 
+		case '?':
+		{
+			rl_t l = d_range(d->biop.l);
+
+			if(l.low > 0)
+				return l;
+
+			rl_t r = d_range(d->biop.r);
+			
+			if(l.high <= 0)
+				return r;
+
+			if(settings.verbose)
+				fprintf(stderr, "[!] Exploding a '?'-expression may yield unexpected outcomes for probability functions with roots\n");
+
+			return range_lim(min(1, r.low), max(l.high, r.high));
+		}
+
 		case '\\':
 		{
 			rl_t r = d_range(d->reroll.v);
