@@ -169,10 +169,22 @@ void p_print(struct prob p)
 {
 	double avg = 0.0;
 	double var = 0.0;
+	double p25 = 0.0;
+	double p75 = 0.0;
+	double sum = 0.0;
 
 	for (int i = 0; i < p.len; i++)
+	{
 		avg += p.p[i] * (i + p.low);
 
+		// intra-bucket linear interpolation
+		if(sum < 0.25 && sum + p.p[i] >= 0.25)
+			p25 = (p.low + i) + (.25 - sum) / p.p[i];
+		if(sum < 0.75 && sum + p.p[i] >= 0.75)
+			p75 = (p.low + i) + (.75 - sum) / p.p[i];
+	
+		sum += p.p[i];
+	}
 	for (int i = 0; i < p.len; i++)
 	{
 		double d = (i + p.low) - avg;
@@ -180,6 +192,7 @@ void p_print(struct prob p)
 	}
 
 	printf("Avg: %f\tVariance: %f\tSigma: %f\n", avg, var, sqrt(var));
+	printf("Min: %d\t 25%%: %f\t 75%%: %f\tMax: %d\n", p.low, p25, p75, p.low + p.len - 1);
 
 	if(!settings.concise)
 		p_plot(p);

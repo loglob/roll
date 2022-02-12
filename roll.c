@@ -60,7 +60,6 @@ int main(int argc, char **argv)
 						"	D_n        Identical to D_1/n.\n"
 						"	D!         Rolls D with exploding dice, so another roll of D is added to the maximum value\n"
 						"	               and another roll of D is subtracted from the minimum value.\n"
-						"	D?D        Rolls on the left die, then replaces a result of 0 or less with a roll on the right die.\n"
 						"	DxD        Rolls on the left die, then adds that many rolls of the right die.\n"
 						"	D*D        Rolls on both dice, then multiplies the results.\n"
 						"	D/D        Rolls on both dice, then divides the results.\n"
