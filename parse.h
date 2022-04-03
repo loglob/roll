@@ -30,6 +30,7 @@ expr := INT
 
 #define NUL ((char)0)
 #define INT ((char)-2)
+#define ZERO ((char)-3)
 #define BIOPS "+-*x/<>"
 #define SELECT "^_"
 #define REROLLS "~\\"
@@ -76,7 +77,9 @@ static void _printtk(char tk)
 	if(tk == NUL)
 		fprintf(stderr, "end of input");
 	else if(tk == INT)
-		fprintf(stderr, "a number");
+		fprintf(stderr, "a positive number");
+	else if(tk == ZERO)
+		fprintf(stderr, "zero");
 	else
 		fprintf(stderr, isalnum(tk) ? "'%c'" : "%c", tk);
 }
@@ -150,7 +153,7 @@ static char _lex(struct lexstate *ls)
 		if(errno)
 			lerr(*ls, "Integer value too large.\n");
 
-		return ls->last = INT;
+		return ls->last = (ls->num) ? INT : ZERO;
 	}
 	if(!i)
 	{
@@ -257,6 +260,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 		switch (lex())
 		{
 			case INT:
+			case ZERO:
 			{
 				left = d_clone((struct dieexpr){ .op = INT, .constant = ls->num });
 
@@ -315,7 +319,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				else
 					of = lexc(INT);
 
-				if(sel <= 0 || of <= 0 || sel >= of)
+				if(sel >= of)
 					err("Invalid selection values.");
 
 				left = d_clone((struct dieexpr){ .op = op, .select= { .v = left, .of = of, .sel = sel } });
@@ -327,18 +331,13 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 			continue;
 
 			case '$':
-			printf("SANITY CHECK 1\n");
 				if(lex() != INT)
 				{
-					printf("SANITY CHECK 2\n");
 					unlex();
 					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = 1 } });
 				}
 				else
-				{
-					printf("SANITY CHECK 3\n");
 					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = ls->num } });
-				}
 			continue;
 
 			case '\\':

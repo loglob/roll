@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 						"A die is represented by the language:\n"
 						"	n d n      Expands to 'n x d n'.\n"
 						"	d n        Rolling a die with n sides.\n"
-						"	n          A constant value of n.\n"
+						"	n          A constant value of n. n may be 0.\n"
 						"	D~n,n,...  Rerolls once if any of the given values are rolled. Numbers may be negative.\n"
 						"	D\\n,n,...  Functions like ~ with infinite rerolls.\n"
 						"	D^n/n      Selects the n highest values out of n tries.\n"
@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 						"	D?D        Rolls on the left die and, if the result is less than 1, replaces it with the right die.\n"
 						"	D?D:D      Rolls on the leftmost die, and returns the middle die if the result was greater than 0, and the rightmost die otherwise.\n"
 						"	(D)        The same as D, used for enforcing operator association.\n"
-						"Where n represents an unsigned number, and D represents another die.\n"
+						"Where n represents a positive whole number, and D represents another die.\n"
 						"Operator precedence is as shown.\n"
 						, argv[0]);
 				return EXIT_SUCCESS;
