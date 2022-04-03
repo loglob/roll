@@ -1,6 +1,7 @@
 /* plotting.h: handles plotting of p_t functions */
 #pragma once
 #include "prob.h"
+#include "parse.h"
 #include <sys/ioctl.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -182,7 +183,7 @@ void p_print(struct prob p)
 			p25 = (p.low + i) + (.25 - sum) / p.p[i];
 		if(sum < 0.75 && sum + p.p[i] >= 0.75)
 			p75 = (p.low + i) + (.75 - sum) / p.p[i];
-	
+
 		sum += p.p[i];
 	}
 	for (int i = 0; i < p.len; i++)

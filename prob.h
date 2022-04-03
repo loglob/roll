@@ -525,7 +525,7 @@ struct prob p_explodes(struct prob p)
 	p.len -= 2;
 	p.low++;
 	memmove(p.p, p.p + 1, p.len * sizeof(double));
-	p.p = explain_realloc_or_die(p.p, p.len * sizeof(double));
+	p.p = xrealloc(p.p, p.len * sizeof(double));
 
 	return p_merges(p_merges(p, exp, Pmax), imp, Pmin);
 }
@@ -538,7 +538,7 @@ struct prob p_bool(double prob)
 		return p_constant(1);
 	else
 	{
-		struct prob p = (struct prob){ .len = 2, .low = 0, .p = explain_malloc_or_die(2 * sizeof(double)) };
+		struct prob p = (struct prob){ .len = 2, .low = 0, .p = xmalloc(2 * sizeof(double)) };
 		p.p[1] = prob;
 		p.p[0] = 1 - p.p[1];
 		return p;

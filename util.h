@@ -3,17 +3,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <libexplain/calloc.h>
-#include <libexplain/malloc.h>
-#include <libexplain/realloc.h>
 #include <limits.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
-
-#define xcalloc explain_calloc_or_die
-#define xmalloc explain_malloc_or_die
-#define xrealloc explain_realloc_or_die
+#include "xmalloc.h"
 
 /* Determines if element is in the array set of length length */
 bool in(int length, int set[length], int element)
@@ -58,7 +52,7 @@ int sumls(const signed int *ls, size_t c)
 
 	for (size_t i = 0; i < c; i++)
 		sum += ls[i];
-	
+
 	return sum;
 }
 

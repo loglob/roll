@@ -1,5 +1,5 @@
 cflags := -Wall -Wextra -Wno-unknown-pragmas
-libs := -lm -lexplain
+libs := -lm
 
 roll: roll.c *.h
 	gcc -O2 $(cflags) $< $(libs) -o $@
