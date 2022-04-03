@@ -12,6 +12,7 @@ expr := INT
 	| expr '*' expr
 	| expr 'x' expr
 	| expr !
+	| expr $ INT
 	| expr ^ INT / INT
 	| expr _ INT / INT
 	| expr ~ intls
@@ -81,7 +82,7 @@ static void _printtk(char tk)
 }
 
 /* Prints an error message, describing that a token isn't in the given list of expected tokens. */
-static void _unexptk(ls_t ls, char first, ...)
+static void _unexptk(ls_t ls, int first, ...)
 {
 	va_list vl;
 	va_start(vl, first);

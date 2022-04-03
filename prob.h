@@ -156,7 +156,7 @@ struct prob p_dup(struct prob p)
 	};
 }
 
-/* Creates a probility function that maps the given value to 1. */
+/* Creates a probability function that maps the given value to 1. */
 struct prob p_constant(int val)
 {
 	double *p = xmalloc(sizeof(double));
@@ -431,7 +431,7 @@ struct prob p_muls(struct prob l, struct prob r)
 	return sum;
 }
 
-/* Eumaltes rolling on p of times, and then selecting the highest/lowest value. */
+/* Emulates rolling on p of times, and then selecting the highest/lowest value. */
 struct prob p_selectOne(struct prob p, int of, bool selHigh)
 {
 	// sum[n] ::= Sum(p.p[i] | i <= n)

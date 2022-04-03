@@ -41,7 +41,7 @@ static unsigned int hcol()
 }
 
 /* Determines if d is a boolean expression */
-static bool d_boolean(d_t *d)
+bool d_boolean(d_t *d)
 {
 	switch(d->op)
 	{
