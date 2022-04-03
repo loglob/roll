@@ -180,6 +180,22 @@ int sim(struct dieexpr *d)
 			return d->constant;
 		};
 
+		case '$':
+		{
+			rl_t r = d_range(d->explode.v);
+			int cur = sim(d->explode.v);
+			int sum = cur;
+			int i;
+
+			for (i = 0; i < d->explode.rounds && cur == r.high; i++)
+				sum += cur = sim(d->explode.v);
+
+			if(i > 0 && settings.verbose)
+				printf("Rolled a %d which exploded %d times to %d\n", r.high, i, sum);
+
+			return sum;
+		}
+
 		case '!':
 		{
 			rl_t r = d_range(d->unop);

@@ -381,8 +381,8 @@ struct prob p_mulks(struct prob p, signed int x)
 	return r;
 }
 
-/* adds l onto r*q */
-struct prob p_merges(struct prob l, struct prob r, double q)
+/* adds l onto r*q. Leaves l and r unchanged */
+struct prob p_merge(struct prob l, struct prob r, double q)
 {
 	assert(q > 0);
 
@@ -397,12 +397,19 @@ struct prob p_merges(struct prob l, struct prob r, double q)
 	for (int i = 0; i < r.len; i++)
 		p[i + r.low - low] += r.p[i] * q;
 
+	return (struct prob){ .low = low, .len = len, .p = p };
+}
+
+/* adds l onto r*q. In-place. */
+struct prob p_merges(struct prob l, struct prob r, double q)
+{
+	p_t res = p_merge(l, r, q);
 	p_free(l);
 
 	if(l.p != r.p)
 		p_free(r);
 
-	return (struct prob){ .low = low, .len = len, .p = p };
+	return res;
 }
 
 /* Rolls on l and sums that many rolls of r. */
@@ -630,4 +637,29 @@ struct prob p_terns(struct prob cond, struct prob then, struct prob otherwise)
 	}
 
 	return p_merges(p_scales(then, p), otherwise, 1 - p);
+}
+
+
+/* Simulates n rounds of exploding-only rolls on p. In-place. */
+struct prob p_explode_ns(const struct prob p, int n)
+{
+	assert(p.len > 1);
+	assert(n > 0);
+
+	int max = p.len + p.low - 1;
+	double pmax = p.p[p.len - 1];
+
+	// Axiom (1) gets restored over the loop
+	p_t res = p_dup((struct prob){ .len = p.len - 1, .low = p.low, .p = p.p });
+	double pcur = pmax;
+
+	for (int i = 1; i < n; i++, pcur *= pmax)
+	{
+		p_t cur = p_merge(res, (struct prob){ .len = p.len - 1, .low = p.low + max * i, .p = p.p }, pcur);
+		p_free(res);
+		res = cur;
+	}
+
+	// final round without cutting off the maximum. Effectively cut off the converging infinite series, restoring Axiom (1)
+	return p_merges(res, (struct prob){ .len = p.len, .low = p.low + max * n, .p = p.p }, pcur);
 }

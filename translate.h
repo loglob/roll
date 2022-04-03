@@ -45,6 +45,9 @@ p_t translate(d_t *d)
 		case '!':
 			return p_explodes(translate(d->unop));
 
+		case '$':
+			return p_explode_ns(translate(d->explode.v), d->explode.rounds);
+
 		case '<':
 			return p_less(translate(d->biop.l), translate(d->biop.r));
 		case '>':
@@ -94,6 +97,12 @@ void d_print(d_t *d)
 		case '!':
 			d_print(d->unop);
 			putchar('!');
+		break;
+
+		case '$':
+			d_print(d->explode.v);
+			putchar('$');
+			printf("%d", d->explode.rounds);
 		break;
 
 		case '>':
@@ -166,6 +175,11 @@ void d_printTree(struct dieexpr *d, int depth)
 		case '!':
 			printf("EXPLODING DICE\n");
 			d_printTree(d->unop, depth + 1);
+		break;
+
+		case '$':
+			printf("%u TIMES EXPLODING DICE\n", d->explode.rounds);
+			d_printTree(d->explode.v, depth + 1);
 		break;
 
 

@@ -32,7 +32,7 @@ expr := INT
 #define BIOPS "+-*x/<>"
 #define SELECT "^_"
 #define REROLLS "~\\"
-#define UOPS SELECT REROLLS "!"
+#define UOPS SELECT REROLLS "!$"
 #define SPECIAL BIOPS UOPS "d,/()?:"
 
 /* represents the state of the lexer */
@@ -58,6 +58,8 @@ typedef struct dieexpr
 		struct { struct dieexpr *v; int sel, of; } select;
 		// valid if op in REROLLS
 		struct { struct dieexpr *v; int *ls; int count;} reroll;
+		// valid if op is '$'
+		struct { struct dieexpr *v; int rounds; } explode;
 		// valid if op in UOPS
 		struct dieexpr *unop;
 		// valid if op == INT || op == d
@@ -323,6 +325,21 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				left = d_clone((struct dieexpr){ .op = op, .unop = left });
 			continue;
 
+			case '$':
+			printf("SANITY CHECK 1\n");
+				if(lex() != INT)
+				{
+					printf("SANITY CHECK 2\n");
+					unlex();
+					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = 1 } });
+				}
+				else
+				{
+					printf("SANITY CHECK 3\n");
+					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = ls->num } });
+				}
+			continue;
+
 			case '\\':
 			case '~':
 			{
@@ -450,6 +467,8 @@ void d_free(struct dieexpr *d)
 		d_free(d->reroll.v);
 		free(d->reroll.ls);
 	}
+	else if(strchr(UOPS, d->op))
+		d_free(d->unop);
 
 	free(d);
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "ranges.h"
 #include "parse.h"
+#include "settings.h"
 
 rl_t d_range(d_t *d)
 {
@@ -49,6 +50,12 @@ rl_t d_range(d_t *d)
 			rl_t r = d_range(d->unop);
 
 			return range_lim(r.low - r.high, r.high * 2);
+		}
+
+		case '$':
+		{
+			rl_t r = d_range(d->explode.v);
+			return range_lim(r.low, r.high * (1 + d->explode.rounds));
 		}
 
 		case '~':
