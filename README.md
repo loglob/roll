@@ -1,11 +1,8 @@
 # roll
-A simple dice-perentage calculator. It can output either a histogram or roll a given dice expression.
+A simple dice-percentage calculator. It can output either a histogram or roll a given dice expression.
 
 ## Building
 Simply run `make` to build the `roll` executable.
-### Dependencies
-roll depends on libexplain.
-On debian-based systems, libexplain can be installed via `apt install libexplain-dev`.
 
 ## Usage
 roll implements a simple language that allows for specifying dice expressions.
