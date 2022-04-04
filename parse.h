@@ -21,6 +21,7 @@ expr := INT
 ;
 */
 #pragma once
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -95,34 +96,68 @@ static const char *tkstr(char tk)
 	}
 }
 
-/* Prints an error message, describing that a token isn't in the given list of expected tokens. */
-static void _unexptk(ls_t ls, int first, ...)
+
+/* Like _unexptk, but accepts strings instead of chars. An empty string encoded the NUL token. */
+static void _unexptks(ls_t ls, const char *first, ...)
 {
 	va_list vl;
 	va_start(vl, first);
 
 	fprintf(stderr, "Error at %.5s: Bad Token: Didn't expect %s; expected ", ls.err, tkstr(ls.last));
 
-	int cur = first;
-	int next = va_arg(vl, int);
-
-	while(cur != -1)
+	for(const char *cur = first; cur;)
 	{
-		if(cur != first)
-			fputs((next == -1) ? " or " : ", ", stderr);
+		const char *next = va_arg(vl, const char*);
 
-		fputs(tkstr(cur), stderr);
+		if(!*cur)
+		{ // NUL
+			if(cur != first)
+				fputs(next ? ", " : " or ", stderr);
+
+			fputs(tkstr(NUL), stderr);
+		}
+		else for(;*cur; cur++)
+		{
+			if(cur != first)
+				fputs((next || cur[1]) ? ", " : " or ", stderr);
+
+			fputs(tkstr(*cur), stderr);
+		}
 
 		cur = next;
-
-		if(next != -1)
-			next = va_arg(vl, int);
 	}
 
 	fputs(".\n", stderr);
 	va_end(vl);
 	exit(EXIT_FAILURE);
 }
+
+/* Prints an error message, describing that a token isn't in the given list of expected tokens. */
+static void _unexptk(ls_t ls, int first, ...)
+{
+	va_list vl;
+	va_start(vl, first);
+	char buf[100];
+	char *b = buf;
+
+	bool nul = false;
+
+	for (int cur = first; cur != -1; cur = va_arg(vl, int))
+	{
+		if(cur == NUL)
+			nul = true;
+		else
+			*b++ = cur;
+	}
+
+	*b = 0;
+
+	if(nul && b != buf)
+		_unexptks(ls, buf, "", NULL);
+	else
+		_unexptks(ls, buf, NULL);
+}
+
 
 #define _LS *ls
 #define lerrf(ls, fmt, ...) eprintf("Error at %.5s: " fmt "\n", (ls).err, __VA_ARGS__)
@@ -131,6 +166,7 @@ static void _unexptk(ls_t ls, int first, ...)
 #define err(msg) lerr(_LS, msg)
 #define lbadtk(ls, ...) _unexptk(ls, __VA_ARGS__, -1)
 #define badtk(...) _unexptk(_LS, __VA_ARGS__, -1)
+#define badtks(...) _unexptks(_LS, __VA_ARGS__, NULL)
 
 #pragma endregion
 
@@ -426,15 +462,15 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 			left->ternary.then = t;
 			left->ternary.otherwise = _parse_pexpr(NULL, ls);
 		}
-		else if(op == '(' && ls->pdepth)
+		else if(op == ')' && ls->pdepth)
 		{
 			ls->pdepth--;
 			return d_clone((d_t){ .op = '(', .unop = left });
 		}
 		else if(ls->pdepth)
-			badtk('+', '-', '*', 'x', '^', '_', '~', ')', NUL);
+			badtks(BIOPS, UOPS, ")", "");
 		else
-			badtk('+', '-', '*', 'x', '^', '_', '~', NUL);
+			badtks(BIOPS, UOPS, "");
 	}
 }
 
