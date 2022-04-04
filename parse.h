@@ -33,6 +33,8 @@ expr := INT
 #define ZERO ((char)-3)
 // equivalent to (char)-4
 #define UPUP '\xFC'
+// equivalent to (char)-3
+#define __ '\xFB'
 #define BIOPS "+-*x/<>" "\xFC\xFB"
 #define SELECT "^_"
 #define REROLLS "~\\"
@@ -85,6 +87,7 @@ static const char *tkstr(char tk)
 		case INT: return "a positive number";
 		case ZERO: return "zero";
 		case UPUP: return "^^";
+		case __: return "__";
 
 		default:
 			sprintf(retBuf, isalnum(tk) ? "'%c'" : "%c", tk);
@@ -216,6 +219,7 @@ static int precedence(char op)
 		case '>':
 			return 10;
 		case UPUP:
+		case __:
 			return 8;
 		case '+':
 			return 5;
@@ -319,7 +323,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 
 				if(nx == op)
 				{
-					ls->last = UPUP;
+					ls->last = (op == '^') ? UPUP : __;
 					unlex();
 					return left;
 				}

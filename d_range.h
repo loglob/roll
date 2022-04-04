@@ -119,7 +119,13 @@ rl_t d_range(d_t *d)
 		case UPUP:
 		{
 			rl_t l = d_range(d->biop.l), r = d_range(d->biop.l);
-			return range_lim(max(l.low, r.low), max(l.low, r.low));
+			return range_lim(max(l.low, r.low), max(l.high, r.high));
+		}
+
+		case __:
+		{
+			rl_t l = d_range(d->biop.l), r = d_range(d->biop.l);
+			return range_lim(min(l.low, r.low), min(l.high, r.high));
 		}
 
 		default:

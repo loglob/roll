@@ -689,15 +689,48 @@ struct prob p_max(struct prob l, struct prob r)
 	res.len = max(p_h(l), p_h(r)) - res.low + 1;
 	res.p = xcalloc(res.len, sizeof(double));
 
-	// very naive algo, can't think of smart implementation right now (it's 4AM)
 	for (int i = 0; i < res.len; i++)
 	{
 		int n = i + res.low;
 		double pl = probof(l, n), pr = probof(r, n);
 
+		// todo: use running sums instead of probof_lt
 		res.p[i] = (pl > 0 ? pl * probof_lt(r,n) : 0) + (pr ? pr * probof_lt(l,n) : 0) + pl * pr;
 	}
 
+	p_free(l);
+
+	if(r.p != l.p)
+		p_free(r);
+
 	// I think Axioms 2 & 3 must always hold, not 100% though
+	return res;
+}
+
+struct prob p_min(struct prob l, struct prob r)
+{
+	struct prob res;
+	res.low = min(l.low, r.low);
+	res.len = min(p_h(l), p_h(r)) - res.low + 1;
+	res.p = xcalloc(res.len, sizeof(double));
+
+	for (int i = 0; i < res.len; i++)
+	{
+		int n = i + res.low;
+		double pl = probof(l, n), pr = probof(r, n);
+
+		// todo: use running sums instead of probof_lt
+		#define probof_gt(p, n) (1 - probof_lt(p, (n)+1))
+
+		res.p[i] = pl * pr + (pl > 0 ? pl * probof_gt(r, n) : 0) + (pr > 0 ? pr * probof_gt(l, n) : 0);
+
+		#undef probof_gt
+	}
+
+	p_free(l);
+
+	if(r.p != l.p)
+		p_free(r);
+
 	return res;
 }

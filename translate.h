@@ -62,6 +62,9 @@ p_t translate(d_t *d)
 		case UPUP:
 			return p_max(translate(d->biop.l), translate(d->biop.r));
 
+		case __:
+			return p_min(translate(d->biop.l), translate(d->biop.r));
+
 		default:
 			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}
@@ -93,6 +96,7 @@ void d_print(d_t *d)
 		case '/':
 		case '?':
 		case UPUP:
+		case __:
 			d_print(d->biop.l);
 			printf(" %s ", tkstr(d->op));
 			d_print(d->biop.r);
@@ -198,6 +202,7 @@ void d_printTree(struct dieexpr *d, int depth)
 		b('*', "CACHED MUL")
 		b('/', "CACHED DIV")
 		b(UPUP, "MAXIMUM")
+		b(__, "MINIMUM")
 
 		case ':':
 			printf("TERNARY OPERATOR\n");

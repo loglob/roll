@@ -39,6 +39,7 @@ int sim(struct dieexpr *d)
 		biop('/', /)
 
 		_biop(UPUP, max(l,r));
+		_biop(__, min(l,r));
 
 		#undef biop
 		#undef _biop
