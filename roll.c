@@ -68,6 +68,7 @@ int main(int argc, char **argv)
 						"	D/D        Rolls on both dice, then divides the results.\n"
 						"	D+D        Adds the results of two dice.\n"
 						"	D-D        Subtracts the results of two dice.\n"
+						"	D^^D       Rolls on both dice, then selects the higher result.\n"
 						"	D>D        Rolls on both dice, then checks if left is larger than right.\n"
 						"	D<D        Rolls on both dice, then checks if left is smaller than right.\n"
 						"	D?D        Rolls on the left die and, if the result is less than 1, replaces it with the right die.\n"

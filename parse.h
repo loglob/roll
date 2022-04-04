@@ -31,7 +31,9 @@ expr := INT
 #define NUL ((char)0)
 #define INT ((char)-2)
 #define ZERO ((char)-3)
-#define BIOPS "+-*x/<>"
+// equivalent to (char)-4
+#define UPUP '\xFC'
+#define BIOPS "+-*x/<>" "\xFC\xFB"
 #define SELECT "^_"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!$"
@@ -82,6 +84,7 @@ static const char *tkstr(char tk)
 		case NUL: return "end of input";
 		case INT: return "a positive number";
 		case ZERO: return "zero";
+		case UPUP: return "^^";
 
 		default:
 			sprintf(retBuf, isalnum(tk) ? "'%c'" : "%c", tk);
@@ -212,6 +215,8 @@ static int precedence(char op)
 		case '<':
 		case '>':
 			return 10;
+		case UPUP:
+			return 8;
 		case '+':
 			return 5;
 		case '-':
@@ -310,7 +315,18 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 			case '^':
 			case '_':
 			{
-				int sel = lexc(INT);
+				int nx = lex();
+
+				if(nx == op)
+				{
+					ls->last = UPUP;
+					unlex();
+					return left;
+				}
+				else if(nx != INT)
+					badtk(INT, op);
+
+				int sel = ls->num;
 				int of;
 
 				if(lex() != '/')
@@ -390,54 +406,31 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 
 	for(;;)
 	{
-		switch(lex())
+		char op = lex();
+
+		if(op == NUL)
+			return left;
+		else if(strchr(BIOPS, op) || op == '?')
+			left = d_merge(left, op, _parse_pexpr(NULL, ls));
+		else if(op == ':' && left->op == '?')
 		{
-			case '+':
-			case '-':
-			case '*':
-			case 'x':
-			case '/':
-			case '<':
-			case '>':
-			case '?':
-			{
-				char op = ls->last;
-				left = d_merge(left, op, _parse_pexpr(NULL, ls));
-			}
-			continue;
+			d_t *c = left->biop.l;
+			d_t *t = left->biop.r;
 
-			case ':':
-			{
-				if(left->op != '?')
-					goto got_bad_tk;
-
-				d_t *c = left->biop.l;
-				d_t *t = left->biop.r;
-
-				left->op = ':';
-				left->ternary.cond = c;
-				left->ternary.then = t;
-				left->ternary.otherwise = _parse_pexpr(NULL, ls);
-			}
-			continue;
-
-			case NUL:
-				return left;
-
-			case ')':
-				if(ls->pdepth)
-				{
-					ls->pdepth--;
-					return d_clone((d_t){ .op = '(', .unop = left });
-				}
-			// fallthrough
-			default:
-				got_bad_tk:
-				if(ls->pdepth)
-					badtk('+', '-', '*', 'x', '^', '_', '~', ')', NUL);
-				else
-					badtk('+', '-', '*', 'x', '^', '_', '~', NUL);
+			left->op = ':';
+			left->ternary.cond = c;
+			left->ternary.then = t;
+			left->ternary.otherwise = _parse_pexpr(NULL, ls);
 		}
+		else if(op == '(' && ls->pdepth)
+		{
+			ls->pdepth--;
+			return d_clone((d_t){ .op = '(', .unop = left });
+		}
+		else if(ls->pdepth)
+			badtk('+', '-', '*', 'x', '^', '_', '~', ')', NUL);
+		else
+			badtk('+', '-', '*', 'x', '^', '_', '~', NUL);
 	}
 }
 

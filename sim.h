@@ -23,11 +23,13 @@ int sim(struct dieexpr *d)
 {
 	switch(d->op)
 	{
-		#define biop(c, op) case c: { \
+		#define _biop(c, calc) case c: { \
 			int l = sim(d->biop.l), r = sim(d->biop.r); \
-			int res = l op r; \
-			if(settings.verbose) printf("%d %c %d = %d\n", l, c, r, res); \
+			int res = calc; \
+			if(settings.verbose) printf("%d %s %d = %d\n", l, tkstr(c), r, res); \
 			return res; }
+
+		#define biop(c, op) _biop(c, l op r)
 
 		biop('<', <)
 		biop('>', >)
@@ -36,7 +38,10 @@ int sim(struct dieexpr *d)
 		biop('*', *)
 		biop('/', /)
 
+		_biop(UPUP, max(l,r));
+
 		#undef biop
+		#undef _biop
 
 		case '?':
 		{

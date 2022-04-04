@@ -59,6 +59,9 @@ p_t translate(d_t *d)
 		case ':':
 			return p_terns(translate(d->ternary.cond), translate(d->ternary.then), translate(d->ternary.otherwise));
 
+		case UPUP:
+			return p_max(translate(d->biop.l), translate(d->biop.r));
+
 		default:
 			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}
@@ -89,8 +92,9 @@ void d_print(d_t *d)
 		case '+':
 		case '/':
 		case '?':
+		case UPUP:
 			d_print(d->biop.l);
-			printf(" %c ", d->op);
+			printf(" %s ", tkstr(d->op));
 			d_print(d->biop.r);
 		break;
 
@@ -193,6 +197,7 @@ void d_printTree(struct dieexpr *d, int depth)
 		b('x', "UNCACHED MUL")
 		b('*', "CACHED MUL")
 		b('/', "CACHED DIV")
+		b(UPUP, "MAXIMUM")
 
 		case ':':
 			printf("TERNARY OPERATOR\n");
@@ -222,6 +227,9 @@ void d_printTree(struct dieexpr *d, int depth)
 			putchar('\n');
 			d_printTree(d->select.v, depth + 1);
 		break;
+
+		default:
+			fprintf(stderr, "WARN: Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 
 		#undef b
 	}

@@ -116,6 +116,12 @@ rl_t d_range(d_t *d)
 			return range_lim(r.low * d->select.sel, r.high * d->select.sel);
 		}
 
+		case UPUP:
+		{
+			rl_t l = d_range(d->biop.l), r = d_range(d->biop.l);
+			return range_lim(max(l.low, r.low), max(l.low, r.low));
+		}
+
 		default:
 			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}

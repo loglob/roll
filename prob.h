@@ -111,6 +111,23 @@ double probof(struct prob p, signed int num)
 		return 0.0;
 }
 
+/* The probability of a roll being STRICTLY LESS THAN num in p */
+double probof_lt(struct prob p, signed int num)
+{
+	if(num <= p.low)
+		return 0;
+	else if(num > p_h(p))
+		return 1;
+	// the value is somewhere in the range
+
+	double sum = 0;
+
+	for (int i = 0; i < (num - p.low); i++)
+		sum += p.p[i];
+
+	return sum;
+}
+
 /* Creates a uniform distribution of the range 1..n (inclusive) */
 struct prob p_uniform(int n)
 {
@@ -662,4 +679,25 @@ struct prob p_explode_ns(const struct prob p, int n)
 
 	// final round without cutting off the maximum. Effectively cut off the converging infinite series, restoring Axiom (1)
 	return p_merges(res, (struct prob){ .len = p.len, .low = p.low + max * n, .p = p.p }, pcur);
+}
+
+/** Emulates rolling on l and r, then selecting the higher value */
+struct prob p_max(struct prob l, struct prob r)
+{
+	struct prob res;
+	res.low = max(l.low, r.low);
+	res.len = max(p_h(l), p_h(r)) - res.low + 1;
+	res.p = xcalloc(res.len, sizeof(double));
+
+	// very naive algo, can't think of smart implementation right now (it's 4AM)
+	for (int i = 0; i < res.len; i++)
+	{
+		int n = i + res.low;
+		double pl = probof(l, n), pr = probof(r, n);
+
+		res.p[i] = (pl > 0 ? pl * probof_lt(r,n) : 0) + (pr ? pr * probof_lt(l,n) : 0) + pl * pr;
+	}
+
+	// I think Axioms 2 & 3 must always hold, not 100% though
+	return res;
 }
