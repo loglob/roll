@@ -224,6 +224,6 @@ int sim(struct dieexpr *d)
 		}
 
 		default:
-			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
+			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}
 }

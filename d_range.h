@@ -117,6 +117,6 @@ rl_t d_range(d_t *d)
 		}
 
 		default:
-			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
+			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}
 }

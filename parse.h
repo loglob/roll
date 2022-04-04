@@ -71,17 +71,22 @@ typedef struct dieexpr
 
 #pragma region Error Handling
 
-/* Prints a human-readable string for the given token. */
-static void _printtk(char tk)
+/* A human-readable string representation of the given token.
+	NOT reentrant. Return value is NOT safe after subsequent calls.  */
+static const char *tkstr(char tk)
 {
-	if(tk == NUL)
-		fprintf(stderr, "end of input");
-	else if(tk == INT)
-		fprintf(stderr, "a positive number");
-	else if(tk == ZERO)
-		fprintf(stderr, "zero");
-	else
-		fprintf(stderr, isalnum(tk) ? "'%c'" : "%c", tk);
+	static char retBuf[4];
+
+	switch(tk)
+	{
+		case NUL: return "end of input";
+		case INT: return "a positive number";
+		case ZERO: return "zero";
+
+		default:
+			sprintf(retBuf, isalnum(tk) ? "'%c'" : "%c", tk);
+		return retBuf;
+	}
 }
 
 /* Prints an error message, describing that a token isn't in the given list of expected tokens. */
@@ -90,10 +95,7 @@ static void _unexptk(ls_t ls, int first, ...)
 	va_list vl;
 	va_start(vl, first);
 
-	// sometimes C++ streams don't seem so bad...
-	fprintf(stderr, "Error at %.5s: Bad Token: Didn't expect ", ls.err);
-	_printtk(ls.last);
-	fprintf(stderr, "; expected ");
+	fprintf(stderr, "Error at %.5s: Bad Token: Didn't expect %s; expected ", ls.err, tkstr(ls.last));
 
 	int cur = first;
 	int next = va_arg(vl, int);
@@ -101,16 +103,17 @@ static void _unexptk(ls_t ls, int first, ...)
 	while(cur != -1)
 	{
 		if(cur != first)
-			fprintf(stderr, (next == -1) ? " or " : ", ");
+			fputs((next == -1) ? " or " : ", ", stderr);
 
-		_printtk(cur);
+		fputs(tkstr(cur), stderr);
+
 		cur = next;
 
 		if(next != -1)
 			next = va_arg(vl, int);
 	}
 
-	fprintf(stderr, ".\n");
+	fputs(".\n", stderr);
 	va_end(vl);
 	exit(EXIT_FAILURE);
 }

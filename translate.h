@@ -60,7 +60,7 @@ p_t translate(d_t *d)
 			return p_terns(translate(d->ternary.cond), translate(d->ternary.then), translate(d->ternary.otherwise));
 
 		default:
-			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
+			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}
 }
 
@@ -144,7 +144,7 @@ void d_print(d_t *d)
 		break;
 
 		default:
-			eprintf("Invalid die expression; Unknown operator '%c'\n", d->op);
+			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}
 
 }

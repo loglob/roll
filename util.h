@@ -23,6 +23,7 @@ bool in(int length, int set[length], int element)
 
 /* like printf, but prints onto stderr and exits with EXIT_FAILURE. */
 __attribute__((noreturn))
+__attribute__((format(printf, 1, 2)))
 void eprintf(const char *fmt, ...)
 {
 	va_list v;
