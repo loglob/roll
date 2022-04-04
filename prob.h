@@ -111,23 +111,6 @@ double probof(struct prob p, signed int num)
 		return 0.0;
 }
 
-/* The probability of a roll being STRICTLY LESS THAN num in p */
-double probof_lt(struct prob p, signed int num)
-{
-	if(num <= p.low)
-		return 0;
-	else if(num > p_h(p))
-		return 1;
-	// the value is somewhere in the range
-
-	double sum = 0;
-
-	for (int i = 0; i < (num - p.low); i++)
-		sum += p.p[i];
-
-	return sum;
-}
-
 /* Creates a uniform distribution of the range 1..n (inclusive) */
 struct prob p_uniform(int n)
 {
@@ -681,21 +664,31 @@ struct prob p_explode_ns(const struct prob p, int n)
 	return p_merges(res, (struct prob){ .len = p.len, .low = p.low + max * n, .p = p.p }, pcur);
 }
 
-/** Emulates rolling on l and r, then selecting the higher value */
-struct prob p_max(struct prob l, struct prob r)
+/** Emulates rolling on l and r, then selecting the higher value. In-place. */
+struct prob p_maxs(struct prob l, struct prob r)
 {
 	struct prob res;
 	res.low = max(l.low, r.low);
 	res.len = max(p_h(l), p_h(r)) - res.low + 1;
 	res.p = xcalloc(res.len, sizeof(double));
 
+	// probability of l/r being less than the current n
+	double l_lt = 0, r_lt = 0;
+
+	for(signed int n = l.low; n < res.low; n++)
+		l_lt += probof(l, n);
+	for(signed int n = r.low; n < res.low; n++)
+		r_lt += probof(r, n);
+
 	for (int i = 0; i < res.len; i++)
 	{
 		int n = i + res.low;
 		double pl = probof(l, n), pr = probof(r, n);
 
-		// todo: use running sums instead of probof_lt
-		res.p[i] = (pl > 0 ? pl * probof_lt(r,n) : 0) + (pr ? pr * probof_lt(l,n) : 0) + pl * pr;
+		res.p[i] = pl * r_lt + pr * l_lt + pl * pr;
+
+		l_lt += pl;
+		r_lt += pr;
 	}
 
 	p_free(l);
@@ -707,24 +700,32 @@ struct prob p_max(struct prob l, struct prob r)
 	return res;
 }
 
-struct prob p_min(struct prob l, struct prob r)
+/** Emulates rolling on l and r, then selecting the lower value. In-place. */
+struct prob p_mins(struct prob l, struct prob r)
 {
 	struct prob res;
 	res.low = min(l.low, r.low);
 	res.len = min(p_h(l), p_h(r)) - res.low + 1;
 	res.p = xcalloc(res.len, sizeof(double));
 
+	// probability of l/r <= n
+	double l_lte = 0, r_lte = 0;
+
+	for(signed int n = l.low; n < res.low; n++)
+		l_lte += probof(l, n);
+	for(signed int n = r.low; n < res.low; n++)
+		r_lte += probof(r, n);
+
 	for (int i = 0; i < res.len; i++)
 	{
 		int n = i + res.low;
 		double pl = probof(l, n), pr = probof(r, n);
 
-		// todo: use running sums instead of probof_lt
-		#define probof_gt(p, n) (1 - probof_lt(p, (n)+1))
+		l_lte += pl;
+		r_lte += pr;
 
-		res.p[i] = pl * pr + (pl > 0 ? pl * probof_gt(r, n) : 0) + (pr > 0 ? pr * probof_gt(l, n) : 0);
-
-		#undef probof_gt
+		// !(x <= n) <=> x>n
+		res.p[i] = pl * pr + pl * (1 - r_lte) + pr * (1 - l_lte);
 	}
 
 	p_free(l);

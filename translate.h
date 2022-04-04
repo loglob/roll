@@ -60,10 +60,10 @@ p_t translate(d_t *d)
 			return p_terns(translate(d->ternary.cond), translate(d->ternary.then), translate(d->ternary.otherwise));
 
 		case UPUP:
-			return p_max(translate(d->biop.l), translate(d->biop.r));
+			return p_maxs(translate(d->biop.l), translate(d->biop.r));
 
 		case __:
-			return p_min(translate(d->biop.l), translate(d->biop.r));
+			return p_mins(translate(d->biop.l), translate(d->biop.r));
 
 		default:
 			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
