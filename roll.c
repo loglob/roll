@@ -46,7 +46,10 @@ int main(int argc, char **argv)
 						"	-ps      Prints a short overview for a dice expression, instead of a full histogram.\n"
 						"	-c[v]    Compares a dice expression to a number.\n"
 						"	-n       Compares the result percentage to a normal distribution with the same 𝜇 and 𝜎.\n"
+						"	         	Note that the squared error values are slightly overestimated.\n"
+						"	-ns      Same as -n but doesn't print the full histogram.\n"
 						"	-a       Compares the first given die to all following dice.\n"
+						"	-as      Same as -a but doesn't print the full histogram.\n"
 						"These modes are applied to all following dice, until another mode is specified.\n"
 						"The default mode is -p\n"
 						"Dice:\n"
@@ -120,13 +123,24 @@ int main(int argc, char **argv)
 				}
 				continue;
 
+				#define CONCISE_ARG if((argv[i][2] == 's' || argv[i][2] == 'S') && !argv[i][3]) \
+						settings.concise = true; \
+					else if(argv[i][2]) \
+						goto bad_arg; \
+					else \
+						settings.concise = false;
+
 				case 'a':
 				case 'A':
+					CONCISE_ARG
+
 					settings.mode = PREDICT_COMP;
 				continue;
 
 				case 'n':
 				case 'N':
+					CONCISE_ARG
+
 					settings.mode = PREDICT_COMP_NORMAL;
 				continue;
 
@@ -140,12 +154,7 @@ int main(int argc, char **argv)
 
 				case 'p':
 				case 'P':
-					if(argv[i][2] == 's' && !argv[i][3])
-						settings.concise = true;
-					else if(argv[i][2])
-						goto bad_arg;
-					else
-						settings.concise = false;
+					CONCISE_ARG
 
 					settings.mode = PREDICT;
 				continue;
@@ -270,16 +279,22 @@ int main(int argc, char **argv)
 					if(settings.mode == PREDICT_COMP_NORMAL)
 					{
 						settings.compare = xmalloc(sizeof(p_t));
-						*settings.compare = (struct prob){ .len = p.len, .low = p.low, .p = xmalloc(sizeof(double) * p.len) };
+						*settings.compare = (struct prob){ .len = p.len + 2, .low = p.low - 1,
+							.p = xmalloc(sizeof(double) * (p.len + 2)) };
+
+						// do this so absolute error is correct & squared error won't be underreported
+						// there is no closed form for the squared error (and the mean doesn't make much sense)
+						// so this is the best solution for now
+						settings.compare->p[0] = phi(p.low - 0.5, mu, sigma);
+						settings.compare->p[p.len + 1] = 1 - phi(p_h(p) + 0.5, mu, sigma);
 
 						for (int i = 0; i < p.len; i++)
-							settings.compare->p[i] = normal(mu, sigma, i + p.low);
+							settings.compare->p[i + 1] = normal(mu, sigma, i + p.low);
 					}
 
 					if(settings.compare)
 						plot_diff(p, *settings.compare);
-
-					if(!settings.verbose)
+					if(!settings.concise)
 						p_plot(p);
 				}
 

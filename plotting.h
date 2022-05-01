@@ -143,9 +143,9 @@ static void plot_barC(struct plotinfo pi, double p, double e)
 	for (int i = 0; i < barlen || i < explen; i++)
 	{
 		if(i >= barlen)
-			putchar('+');
-		else if(i >= explen)
 			putchar('-');
+		else if(i >= explen)
+			putchar('+');
 		else
 			putchar('#');
 	}
@@ -225,15 +225,22 @@ void p_plot(struct prob p)
 	struct plotinfo pi = plot_init("%*d", mw, pmax);
 	p = p_trim(p, pi);
 
-	for (int i = 0; i < p.len; i++)
+	if(settings.compare)
+	{
+		int hi = max(p_h(p), p_h(*settings.compare));
+
+		for (int n = min(p.low, settings.compare->low); n <= hi; n++)
+		{
+			double x = probof(p, n);
+
+			if(plot_preamble(pi, x, mw, n))
+				plot_barC(pi, x, probof(*settings.compare, n));
+		}
+	}
+	else for (int i = 0; i < p.len; i++)
 	{
 		if(plot_preamble(pi, p.p[i], mw, i + p.low))
-		{
-			if(settings.compare)
-				plot_barC(pi, p.p[i], probof(*settings.compare, i + p.low));
-			else
-				plot_bar(pi, p.p[i]);
-		}
+			plot_bar(pi, p.p[i]);
 	}
 }
 
