@@ -117,3 +117,15 @@ signed int min0(signed int a, signed int b)
 {
 	return a && (!b || a < b) ? a : b;
 }
+
+// the integral 𝜙(x) of a normal distribution with the given 𝜇 and 𝜎
+double phi(double x, double mu, double sigma)
+{
+	return 0.5 * erfc((mu - x) / (sqrt(2) * sigma));
+}
+
+// The probability of x being rolled on a rounded normal distribution with the given 𝜇 and 𝜎
+double normal(double mu, double sigma, int x)
+{
+	return phi(x + 0.5, mu, sigma) - phi(x - 0.5, mu, sigma);
+}

@@ -2,6 +2,7 @@
 #pragma once
 #include "prob.h"
 #include "parse.h"
+#include "settings.h"
 #include <sys/ioctl.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -64,7 +65,7 @@ static inline int numw(signed int n)
 	preamble is a printf format to be printed before each row.
 	prlen is the max length of the preamble.
 		A preamble is padded to at least this length.
-	pmax is the maximum probability in the plotted. */
+	pmax is the maximum probability in the plotted data. */
 static struct plotinfo plot_init(const char *preamble, int prlen, double pmax)
 {
 	struct plotinfo pi = {
@@ -97,11 +98,7 @@ static struct plotinfo plot_init(const char *preamble, int prlen, double pmax)
 	return pi;
 }
 
-/* Prints a row of the plot.
-	pi is obtained from plot_init().
-	p is the current probability.
-	the following are arguments for the preamble format. */
-static void plot_row(struct plotinfo pi, double p, ...)
+static bool plot_preamble(struct plotinfo pi, double p, ...)
 {
 	va_list l;
 	va_start(l, p);
@@ -114,15 +111,71 @@ static void plot_row(struct plotinfo pi, double p, ...)
 			(pi.prlen - prlen) + pi.floatlen + 1 + settings.precision,
 			settings.precision, 100 * p);
 
-		int barlen = (int)round(pi.scaling * p);
+		va_end(l);
+		return true;
+	}
+	else
+	{
+		va_end(l);
+		return false;
+	}
+}
 
-		for (int i = 0; i < barlen; i++)
+/* Prints a row of the plot.
+	pi is obtained from plot_init().
+	p is the current probability.
+	the following are arguments for the preamble format. */
+static void plot_bar(struct plotinfo pi, double p)
+{
+	int barlen = (int)round(p * pi.scaling);
+
+	for (int i = 0; i < barlen; i++)
+		putchar('#');
+
+	putchar('\n');
+}
+
+static void plot_barC(struct plotinfo pi, double p, double e)
+{
+	int barlen = (int)round(p * pi.scaling);
+	int explen = (int)round(e * pi.scaling);
+
+	for (int i = 0; i < barlen || i < explen; i++)
+	{
+		if(i >= barlen)
+			putchar('+');
+		else if(i >= explen)
+			putchar('-');
+		else
 			putchar('#');
-
-		putchar('\n');
 	}
 
-	va_end(l);
+	putchar('\n');
+}
+
+static void plot_diff(struct prob p, struct prob e)
+{
+	double sumErr = 0, sumSqErr = 0;
+	int lowest = min(p.low, e.low);
+	int samples = max(p_h(p), p_h(e)) - lowest + 1;
+
+	for (int n = lowest; n < lowest + samples; n++)
+	{
+		double d = fabs(probof(p, n) - probof(e, n));
+
+		sumErr += d;
+		sumSqErr += d*d;
+	}
+
+	double meanErr = (1.0 / samples) * sumErr;
+	double meanSqErr = (1.0 / samples) * sumSqErr;
+	double rootMeanSqErr = sqrt(meanSqErr);
+
+	// TODO: better algorithm for comparing against normal distribution that integrates outside of the die's range
+	printf("Total error: %2$.*1$f	Mean error: %3$.*1$f\n", settings.precision,
+						sumErr,					meanErr);
+	printf("Total Squared error: %2$.*1$f	Mean Squared Error: %3$.*1$f	Root-Mean-Square Error: %4$.*1$f\n",
+		settings.precision, 	sumSqErr, 						meanSqErr,							rootMeanSqErr);
 }
 
 /* trims p according to program arguments.
@@ -152,21 +205,39 @@ void p_plot(struct prob p)
 	int mw = max(numw(p.low), numw(p_h(p)));
 	double pmax = p.p[0];
 
+	if(settings.compare && settings.compare->p[0] > pmax)
+		pmax = settings.compare->p[0];
+
 	for (int i = 1; i < p.len; i++)
 	{
 		if(p.p[i] > pmax)
 			pmax = p.p[i];
+
+		if(settings.compare)
+		{
+			double c = probof(*settings.compare, i + p.low);
+
+			if(c > pmax)
+				pmax = c;
+		}
 	}
 
 	struct plotinfo pi = plot_init("%*d", mw, pmax);
 	p = p_trim(p, pi);
 
 	for (int i = 0; i < p.len; i++)
-		plot_row(pi, p.p[i], mw, i + p.low);
+	{
+		if(plot_preamble(pi, p.p[i], mw, i + p.low))
+		{
+			if(settings.compare)
+				plot_barC(pi, p.p[i], probof(*settings.compare, i + p.low));
+			else
+				plot_bar(pi, p.p[i]);
+		}
+	}
 }
 
-/* Prints full info on p to stdout. */
-void p_print(struct prob p)
+void p_header(struct prob p, double *mu, double *sigma)
 {
 	double avg = 0.0;
 	double var = 0.0;
@@ -195,8 +266,10 @@ void p_print(struct prob p)
 	printf("Avg: %f\tVariance: %f\tSigma: %f\n", avg, var, sqrt(var));
 	printf("Min: %d\t 25%%: %f\t 75%%: %f\tMax: %d\n", p.low, p25, p75, p.low + p.len - 1);
 
-	if(!settings.concise)
-		p_plot(p);
+	if(mu)
+		*mu = avg;
+	if(sigma)
+		*sigma = sqrt(var);
 }
 
 void p_printB(struct prob p)
@@ -206,7 +279,11 @@ void p_printB(struct prob p)
 	struct plotinfo pi = plot_init("%s", 5, isConst ? 1.0 : p.p[p.p[0] < p.p[1]]);
 
 	for (int i = 0; i <= 1; i++)
-		plot_row(pi, isConst ? p.low == i : p.p[i], strs[i]);
+	{
+		double x = isConst ? p.low == i : p.p[i];
+		if(plot_preamble(pi, x, strs[i]))
+			plot_bar(pi, x);
+	}
 }
 
 /* Plots p's compare mode */
@@ -232,7 +309,10 @@ void p_comp(struct prob p)
 	struct plotinfo pi = plot_init("%s%d", 3 + numw(settings.compareValue), pmax);
 
 	for (int i = 0; i < 5; i++)
-		plot_row(pi, cpr[i], op[i], settings.compareValue);
+	{
+		if(plot_preamble(pi, cpr[i], op[i], settings.compareValue))
+			plot_bar(pi, cpr[i]);
+	}
 }
 
 /* Prints debug info on p */

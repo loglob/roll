@@ -45,6 +45,8 @@ int main(int argc, char **argv)
 						"	-p       Prints a histogram for a dice expression.\n"
 						"	-ps      Prints a short overview for a dice expression, instead of a full histogram.\n"
 						"	-c[v]    Compares a dice expression to a number.\n"
+						"	-n       Compares the result percentage to a normal distribution with the same 𝜇 and 𝜎.\n"
+						"	-a       Compares the first given die to all following dice.\n"
 						"These modes are applied to all following dice, until another mode is specified.\n"
 						"The default mode is -p\n"
 						"Dice:\n"
@@ -116,6 +118,16 @@ int main(int argc, char **argv)
 
 					settings.selectRange = true;
 				}
+				continue;
+
+				case 'a':
+				case 'A':
+					settings.mode = PREDICT_COMP;
+				continue;
+
+				case 'n':
+				case 'N':
+					settings.mode = PREDICT_COMP_NORMAL;
 				continue;
 
 				case 'v':
@@ -237,6 +249,8 @@ int main(int argc, char **argv)
 			break;
 
 			case PREDICT:
+			case PREDICT_COMP:
+			case PREDICT_COMP_NORMAL:
 			{
 				p_t p = translate(d);
 
@@ -249,9 +263,40 @@ int main(int argc, char **argv)
 				if(d_boolean(d))
 					p_printB(p);
 				else
-					p_print(p);
+				{
+					double mu, sigma;
+					p_header(p, &mu, &sigma);
 
-				p_free(p);
+					if(settings.mode == PREDICT_COMP_NORMAL)
+					{
+						settings.compare = xmalloc(sizeof(p_t));
+						*settings.compare = (struct prob){ .len = p.len, .low = p.low, .p = xmalloc(sizeof(double) * p.len) };
+
+						for (int i = 0; i < p.len; i++)
+							settings.compare->p[i] = normal(mu, sigma, i + p.low);
+					}
+
+					if(settings.compare)
+						plot_diff(p, *settings.compare);
+
+					if(!settings.verbose)
+						p_plot(p);
+				}
+
+				if(settings.mode == PREDICT_COMP && !settings.compare)
+				{
+					settings.compare = xmalloc(sizeof(p_t));
+					settings.compare[0] = p;
+				}
+				else
+					p_free(p);
+
+				if(settings.mode == PREDICT_COMP_NORMAL)
+				{
+					p_free(*settings.compare);
+					free(settings.compare);
+					settings.compare = NULL;
+				}
 			}
 			break;
 
@@ -266,6 +311,12 @@ int main(int argc, char **argv)
 		}
 
 		d_free(d);
+	}
+
+	if(settings.compare)
+	{
+		p_free(*settings.compare);
+		free(settings.compare);
 	}
 
 }

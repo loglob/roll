@@ -6,8 +6,10 @@ struct
 	enum
 	{
 		PREDICT,
+		PREDICT_COMP_NORMAL,
+		PREDICT_COMP,
 		ROLL,
-		COMPARE,
+		COMPARE
 	} mode;
 	int rolls;
 	bool debug, verbose, concise;
@@ -15,6 +17,7 @@ struct
 	double cutoff;
 	bool dynamicCutoff;
 	bool globalCutoff;
+	struct prob *compare;
 
 	int precision;
 	int hcolOverwrite;
