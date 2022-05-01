@@ -227,14 +227,15 @@ void p_plot(struct prob p)
 
 	if(settings.compare)
 	{
-		int hi = max(p_h(p), p_h(*settings.compare));
+		p_t c = p_trim(*settings.compare, pi);
+		int hi = max(p_h(p), p_h(c));
 
-		for (int n = min(p.low, settings.compare->low); n <= hi; n++)
+		for (int n = min(p.low, c.low); n <= hi; n++)
 		{
 			double x = probof(p, n);
 
 			if(plot_preamble(pi, x, mw, n))
-				plot_barC(pi, x, probof(*settings.compare, n));
+				plot_barC(pi, x, probof(c, n));
 		}
 	}
 	else for (int i = 0; i < p.len; i++)
