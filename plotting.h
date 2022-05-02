@@ -155,27 +155,36 @@ static void plot_barC(struct plotinfo pi, double p, double e)
 
 static void plot_diff(struct prob p, struct prob e)
 {
-	double sumErr = 0, sumSqErr = 0;
+	double sumErr = 0, sumSqErr = 0, sumRelErr = 0, sumSqRelErr = 0;
 	int lowest = min(p.low, e.low);
 	int samples = max(p_h(p), p_h(e)) - lowest + 1;
 
 	for (int n = lowest; n < lowest + samples; n++)
 	{
-		double d = fabs(probof(p, n) - probof(e, n));
+		double x = probof(p ,n), y = probof(e, n);
+		double d = fabs(x - y);
 
 		sumErr += d;
 		sumSqErr += d*d;
+
+		if(d > 0 && y > 0)
+		{
+			double r = d / y;
+
+			sumRelErr += r;
+			sumSqRelErr += r * r;
+		}
 	}
 
-	double meanErr = (1.0 / samples) * sumErr;
-	double meanSqErr = (1.0 / samples) * sumSqErr;
-	double rootMeanSqErr = sqrt(meanSqErr);
-
-	// TODO: better algorithm for comparing against normal distribution that integrates outside of the die's range
-	printf("Total error: %2$.*1$f	Mean error: %3$.*1$f\n", settings.precision,
-						sumErr,					meanErr);
-	printf("Total Squared error: %2$.*1$f	Mean Squared Error: %3$.*1$f	Root-Mean-Square Error: %4$.*1$f\n",
-		settings.precision, 	sumSqErr, 						meanSqErr,							rootMeanSqErr);
+	// TODO: (MAYBE) Better algorithm for comparing against normal distribution that integrates numerically outside of the die's range
+	printf("Total error: %2$.*1$f%%	Mean error: %3$.*1$f%%\n", settings.precision,
+						100 * sumErr,		100 * sumErr / samples);
+	printf("Total Relative error: %2$.*1$f%%	Mean Relative error: %3$.*1$f%%\n", settings.precision,
+								100 * sumRelErr,			100 * sumRelErr / samples);
+	printf("Total Squared error: %2$.*1$f%%	Mean Squared error: %3$.*1$f%%	Root-Mean-Square error: %4$.*1$f%%\n",
+		settings.precision, 	100 *sumSqErr, 		100 * sumSqErr / samples,			100 * sqrt(sumSqErr / samples));
+	printf("Total Squared Relative error: %2$.*1$f%%	Mean Squared Relative error: %3$.*1$f%%	Root-Mean-Square-Relative error: %4$.*1$f%%\n",
+		settings.precision, 			100 * sumSqRelErr, 					100 * sumSqRelErr / samples,		100 * sqrt(sumSqRelErr/samples));
 }
 
 /* trims p according to program arguments.
