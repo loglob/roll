@@ -135,7 +135,7 @@ static struct range *_set_adjust(struct range *r, signed int start, signed int e
 void set_insert(struct set *s, signed int start, signed int end)
 {
 	// the highest and lowest indices that are fully left/right the given range
-	size_t leftHi;
+	size_t leftHi = leftHi;
 	// Whether those indices exist
 	bool left = false, right = false;
 	// Whether any existing ranges overlap the inserted range, or the range extended by 1 on the left & right
@@ -249,6 +249,6 @@ void set_print(struct set s, FILE *f)
 		if(r.start == r.end)
 			fprintf(f, "%d", r.start);
 		else
-			fprintf(f, "%d..%d", r.start, r.end);
+			fprintf(f, "%d-%d", r.start, r.end);
 	}
 }
