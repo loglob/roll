@@ -100,9 +100,9 @@ rl_t d_range(d_t *d)
 		{
 			rl_t r = d_range(d->reroll.v);
 
-			while(in(d->reroll.count, d->reroll.ls, r.low))
+			while(d->reroll.neg ^ set_has(d->reroll.set, r.low))
 				r.low++;
-			while(in(d->reroll.count, d->reroll.ls, r.high))
+			while(d->reroll.neg ^ set_has(d->reroll.set, r.high))
 				r.high--;
 
 			return range_lim(r.low, r.high);

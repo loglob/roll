@@ -9,18 +9,6 @@
 #include <stdio.h>
 #include "xmalloc.h"
 
-/* Determines if element is in the array set of length length */
-bool in(int length, int set[length], int element)
-{
-	for (int i = 0; i < length; i++)
-	{
-		if(element == set[i])
-			return true;
-	}
-
-	return false;
-}
-
 /* like printf, but prints onto stderr and exits with EXIT_FAILURE. */
 __attribute__((noreturn))
 __attribute__((format(printf, 1, 2)))

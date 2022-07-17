@@ -6,6 +6,7 @@
 #include "util.h"
 #include "ranges.h"
 #include "settings.h"
+#include "set.h"
 
 /* Represents a probability function that follows 4 axioms:
 	(0) p ⊂ ℚ⁺∪{0}
@@ -176,17 +177,17 @@ void p_free(struct prob p)
 	free(p.p);
 }
 
-/* Emulates rolling on p and rerolling once if the value is in rr. In-place. */
-struct prob p_rerolls(struct prob p, int n, int rr[n])
+/* Emulates rolling on p and rerolling once if the value is in the given signed set. In-place. */
+struct prob p_rerolls(struct prob p, bool neg, struct set set)
 {
-	if(!rr)
+	if(set_hasAll(set, p.low, p.low + p.len - 1) || !set_hasAny(set, p.low, p.low + p.len - 1))
 		return p;
 
 	double prr = 0.0;
 
 	for (int i = 0; i < p.len; i++)
 	{
-		if(in(n, rr, p.low + i))
+		if(neg ^ set_has(set, p.low + i))
 			prr += p.p[i];
 	}
 
@@ -194,23 +195,30 @@ struct prob p_rerolls(struct prob p, int n, int rr[n])
 		return p;
 
 	for (int i = 0; i < p.len; i++)
-		p.p[i] *= !in(n, rr, p.low + i) + prr;
+		p.p[i] *= !(neg ^ set_has(set, p.low + i)) + prr;
 
 	return p;
 }
 
 /* Like p_rerolls, with unlimited rerolls. */
-struct prob p_sans(struct prob p, int n, int rr[n])
+struct prob p_sans(struct prob p, bool neg, struct set set)
 {
-	if(!rr)
+	bool none = !set_hasAny(set, p.low, p.low + p.len - 1);
+	bool all  = set_hasAll(set, p.low, p.low + p.len - 1);
+
+	if(neg ? all : none)
+	// no rerolls can take place
 		return p;
+	if(neg ? none : all)
+	// only rerolls can take place
+		eprintf("Every case of the function is discarded.\n");
 
 	double prr = 0.0;
 	int start = 0, end = 0;
 
 	for (int i = 0; i < p.len; i++)
 	{
-		if(in(n, rr, p.low + i))
+		if(neg ^ set_has(set, p.low + i))
 		{
 			if(i == start)
 				start++;
@@ -227,7 +235,7 @@ struct prob p_sans(struct prob p, int n, int rr[n])
 		eprintf("Every case of the function is discarded.\n");
 
 	for (int i = 0; i < p.len; i++)
-		p.p[i] *= !in(n, rr, p.low + i) / (1 - prr);
+		p.p[i] *= !(neg ^ set_has(set, p.low + i)) / (1 - prr);
 
 	if(start)
 	{

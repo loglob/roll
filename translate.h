@@ -2,6 +2,8 @@
 #pragma once
 #include "prob.h"
 #include "parse.h"
+#include "set.h"
+#include <stdio.h>
 
 /* Transforms a dice expression to equivalent probability function. */
 p_t translate(d_t *d)
@@ -37,10 +39,10 @@ p_t translate(d_t *d)
 			return p_select(translate(d->select.v), d->select.sel, d->select.of, d->op == '^');
 
 		case '~':
-			return p_rerolls(translate(d->reroll.v), d->reroll.count, d->reroll.ls);
+			return p_rerolls(translate(d->reroll.v), d->reroll.neg, d->reroll.set);
 
 		case '\\':
-			return p_sans(translate(d->reroll.v), d->reroll.count, d->reroll.ls);
+			return p_sans(translate(d->reroll.v), d->reroll.neg, d->reroll.set);
 
 		case '!':
 			return p_explodes(translate(d->unop));
@@ -132,7 +134,9 @@ void d_print(d_t *d)
 		case '\\':
 			d_print(d->select.v);
 			printf(" %c", d->op);
-			prls(d->reroll.ls, d->reroll.count);
+			if(d->reroll.neg)
+				putchar('!');
+			set_print(d->reroll.set, stdout);
 		break;
 
 		case ':':
@@ -226,9 +230,9 @@ void d_printTree(struct dieexpr *d, int depth)
 		goto print_rerolls;
 
 		case '~':
-			printf("REROLL ANY OF ");
+			printf("REROLL ANY %s ", d->reroll.neg ? "BUT" : "OF");
 		print_rerolls:
-			prls(d->reroll.ls, d->reroll.count);
+			set_print(d->reroll.set, stdout);
 			putchar('\n');
 			d_printTree(d->select.v, depth + 1);
 		break;

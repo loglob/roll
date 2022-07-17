@@ -122,7 +122,7 @@ int sim(struct dieexpr *d)
 		{
 			int r1 = sim(d->reroll.v);
 
-			if(in(d->reroll.count, d->reroll.ls, r1))
+			if(d->reroll.neg ^ set_has(d->reroll.set, r1))
 			{
 				int r2 = sim(d->reroll.v);
 
@@ -139,7 +139,7 @@ int sim(struct dieexpr *d)
 		{
 			int r = sim(d->reroll.v);
 
-			while(in(d->reroll.count, d->reroll.ls, r))
+			while(d->reroll.neg ^ set_has(d->reroll.set, r))
 			{
 				if(settings.verbose)
 					printf("Discarded %d\n", r);

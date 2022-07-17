@@ -28,6 +28,7 @@ expr := INT
 #include <string.h>
 #include <ctype.h>
 #include "util.h"
+#include "set.h"
 
 #define NUL ((char)0)
 #define INT ((char)-2)
@@ -63,8 +64,16 @@ typedef struct dieexpr
 		struct { struct dieexpr *l, *r; } biop;
 		// valid if op in SELECT
 		struct { struct dieexpr *v; int sel, of; } select;
-		// valid if op in REROLLS
-		struct { struct dieexpr *v; int *ls; int count;} reroll;
+		/** valid if op in REROLLS*/
+		struct
+		{
+			/** The die to roll on */
+			struct dieexpr *v;
+			/** The results to reroll */
+			struct set set;
+			/** If true, negates selection such that every value _not_ in set is rerolled. */
+			bool neg;
+		} reroll;
 		// valid if op is '$'
 		struct { struct dieexpr *v; int rounds; } explode;
 		// valid if op in UOPS
@@ -222,6 +231,25 @@ static int _lexc(struct lexstate *ls, char c)
 	return ls->num;
 }
 
+static signed int _lexd(struct lexstate *ls)
+{
+	switch(_lex(ls))
+	{
+		case '-':
+			return -_lexc(ls, INT);
+
+		case INT:
+			return ls->num;
+
+		case ZERO:
+			return 0;
+
+		default:
+			lbadtk(*ls, '-', INT);
+			__builtin_unreachable();
+	}
+}
+
 static void _unlex(struct lexstate *ls)
 {
 	if(ls->unlex)
@@ -230,15 +258,32 @@ static void _unlex(struct lexstate *ls)
 	ls->unlex = true;
 }
 
+static bool _lexm(struct lexstate *ls, char c)
+{
+	if(_lex(ls) == c)
+		return true;
+	else
+	{
+		_unlex(ls);
+		return false;
+	}
+}
+
 /* Retrieves the next token. Returns the read token kind. */
 #define lex() _lex(ls)
 /* Reads the next token.
 	Then checks if its kind is c, prints an error message and exits if it isn't.
 	Returns the read integer value. */
 #define lexc(c) _lexc(ls, c)
+/* Reads a signed integer, i.e. an INT token optionally preceded by '-' to indicate a negative number. */
+#define lexd() _lexd(ls)
 /* Causes the next lex() call to return the same token as the last.
 	Only valid if lex() was called since the last call to unlex() */
 #define unlex() _unlex(ls)
+/* Reads the next token.
+	Then checks if its kind is c and unlex()es it if it isn't.
+	Returns whether the token matched. */
+#define lexm(tk) _lexm(ls,tk)
 
 #pragma endregion
 
@@ -390,43 +435,37 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 			continue;
 
 			case '$':
-				if(lex() != INT)
-				{
-					unlex();
-					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = 1 } });
-				}
-				else
+				if(lexm(INT))
 					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = ls->num } });
+				else
+					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = 1 } });
 			continue;
 
 			case '\\':
 			case '~':
 			{
-				int *v = NULL;
-				int len = 0;
+				struct set set = {};
+				bool neg = lexm('!');
 
 				do
 				{
-					v = xrealloc(v, (++len) * sizeof(int));
+					int start = lexd();
 
-					switch(lex())
+					if(lexm('-'))
 					{
-						case '-':
-							v[len - 1] = -lexc(INT);
-						break;
+						int end = lexd();
 
-						case INT:
-							v[len - 1] = ls->num;
-						break;
+						if(start > end)
+							err("Invalid range specifier, ranges must be ordered");
 
-						default:
-							badtk('-', INT);
-						break;
+						set_insert(&set, start, end);
 					}
-				} while (lex() == ',');
+					else
+						set_insert(&set, start, start);
 
-				left = d_clone((struct dieexpr){ .op = op, .reroll = { .v = left, .ls = v, .count = len } });
-				unlex();
+				} while(lexm(','));
+
+				left = d_clone((struct dieexpr){ .op = op, .reroll = { .v = left, .set = set, .neg = neg } });
 			}
 			continue;
 
@@ -501,7 +540,7 @@ void d_free(struct dieexpr *d)
 	else if(strchr(REROLLS, d->op))
 	{
 		d_free(d->reroll.v);
-		free(d->reroll.ls);
+		set_free(d->reroll.set);
 	}
 	else if(strchr(UOPS, d->op))
 		d_free(d->unop);
