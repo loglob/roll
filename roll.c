@@ -33,7 +33,8 @@ int main(int argc, char **argv)
 						"Arguments:\n"
 						"	-h       prints this help page\n"
 						"	-d       Prints debug info\n"
-						"	-v       enables additional printout when using -r\n"
+						"	-v       Enables additional printout when using -r. Specify again to negate.\n"
+						"	-q       Don't print any histograms for -p, -n or -a. Specify again to negate.\n"
 						"	-t[c=0]  Sets the minimum percentage to display in histograms. Specify nothing to disable trimming.\n"
 						"	-td      Like -t[c], but sets the minimum value so that it shows at least one histogram dot.\n"
 						"	-g       Applies cutoff to every value, not just starting and ending values.\n"
@@ -42,14 +43,11 @@ int main(int argc, char **argv)
 						"	-w[n]    Sets the width of output.\n"
 						" Mode arguments:\n"
 						"	-r[n=1]  Simulates a dice expression n times.\n"
-						"	-p       Prints a histogram for a dice expression.\n"
-						"	-ps      Prints a short overview for a dice expression, instead of a full histogram.\n"
+						"	-p       Prints an analysis and a histogram for a dice expression.\n"
 						"	-c[v]    Compares a dice expression to a number.\n"
 						"	-n       Compares the result percentage to a normal distribution with the same 𝜇 and 𝜎.\n"
 						"	         	Note that the squared error values are slightly overestimated.\n"
-						"	-ns      Same as -n but doesn't print the full histogram.\n"
 						"	-a       Compares the first given die to all following dice.\n"
-						"	-as      Same as -a but doesn't print the full histogram.\n"
 						"These modes are applied to all following dice, until another mode is specified.\n"
 						"The default mode is -p\n"
 						"Dice:\n"
@@ -125,23 +123,26 @@ int main(int argc, char **argv)
 				}
 				continue;
 
-				#define CONCISE_ARG if((argv[i][2] == 's' || argv[i][2] == 'S') && !argv[i][3]) \
-						settings.concise = true; \
-					else if(argv[i][2]) \
-						goto bad_arg; \
-					else \
-						settings.concise = false;
+				case 'p':
+				case 'P':
+					if(argv[i][2])
+						goto bad_arg;
+
+					settings.mode = PREDICT;
+				continue;
 
 				case 'a':
 				case 'A':
-					CONCISE_ARG
+					if(argv[i][2])
+						goto bad_arg;
 
 					settings.mode = PREDICT_COMP;
 				continue;
 
 				case 'n':
 				case 'N':
-					CONCISE_ARG
+					if(argv[i][2])
+						goto bad_arg;
 
 					settings.mode = PREDICT_COMP_NORMAL;
 				continue;
@@ -151,18 +152,22 @@ int main(int argc, char **argv)
 					if(argv[i][2])
 						goto bad_arg;
 
-					settings.verbose = true;
+					settings.verbose = !settings.verbose;
 				continue;
 
-				case 'p':
-				case 'P':
-					CONCISE_ARG
+				case 'q':
+				case 'Q':
+					if(argv[i][2])
+						goto bad_arg;
 
-					settings.mode = PREDICT;
+					settings.concise = !settings.concise;
 				continue;
 
 				case 'd':
 				case 'D':
+					if(argv[i][2])
+						goto bad_arg;
+
 					settings.debug = true;
 				continue;
 
@@ -320,9 +325,12 @@ int main(int argc, char **argv)
 			case COMPARE:
 			{
 				p_t p = translate(d);
+
 				d_print(d);
 				printf(" <=> %d:\n", settings.compareValue);
 				p_comp(p);
+
+				p_free(p);
 			}
 			break;
 		}
