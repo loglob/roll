@@ -55,9 +55,13 @@ struct
 	int rLow;
 	/** The highest histogram line to show if selectRange is true */
 	int rHigh;
+
+	/** The percentiles to check */
+	int percentile;
 } settings =
 {
 	.mode = PREDICT,
 	.cutoff = 0.000005,
-	.precision = 3
+	.precision = 3,
+	.percentile = 25
 };

@@ -1,5 +1,4 @@
 #define _POSIX_C_SOURCE 200809L
-//#include "die.h"
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,10 +36,11 @@ int main(int argc, char **argv)
 						"	-q       Don't print any histograms for -p, -n or -a. Specify again to negate.\n"
 						"	-t[c=0]  Sets the minimum percentage to display in histograms. Specify nothing to disable trimming.\n"
 						"	-td      Like -t[c], but sets the minimum value so that it shows at least one histogram dot.\n"
-						"	-g       Applies cutoff to every value, not just starting and ending values.\n"
+						"	-tg      Applies the cutoff of -t to every value, not just starting and ending values.\n"
 						"	-s[a..b] Shows only the given range of values in histograms.\n"
 						"	-o[p]    Sets the output precision for floats. Overwrites -t with the minimum displayable value.\n"
 						"	-w[n]    Sets the width of output.\n"
+						"	-%%n      Also calculates the nth percentile of a dice expression in -p, -n or -a mode.\n"
 						" Mode arguments:\n"
 						"	-r[n=1]  Simulates a dice expression n times.\n"
 						"	-p       Prints an analysis and a histogram for a dice expression.\n"
@@ -85,24 +85,41 @@ int main(int argc, char **argv)
 						, argv[0]);
 				return EXIT_SUCCESS;
 
-				case 'g':
-				case 'G':
-				{
-					settings.globalCutoff = true;
-				}
+				/** Shorthand for a 1-character long switch that checks for trailing characters */
+				#define SWITCH(c,C) case c: case C: if(argv[i][2]) goto bad_arg;
+
+				SWITCH('d','D')
+					settings.debug = true;
 				continue;
 
-				case 'c':
-				case 'C':
-				{
-					char *end;
-					settings.compareValue = strtoi(&argv[i][2],&end, 10);
+				SWITCH('v','V')
+					settings.verbose = !settings.verbose;
+				continue;
 
-					if(!argv[i][2] || *end)
-						goto bad_arg;
+				SWITCH('q','Q')
+					settings.concise = !settings.concise;
+				continue;
 
-					settings.mode = COMPARE;
-				}
+				case 't':
+				case 'T':
+					if((argv[i][2] == 'd' || argv[i][2] == 'D') && !argv[i][3])
+						settings.dynamicCutoff = true;
+					if((argv[i][2] == 'g' || argv[i][2] == 'G') && !argv[i][3])
+						settings.globalCutoff = true;
+					else if(argv[i][2])
+					{
+						char *end;
+						settings.cutoff = strtod(&argv[i][2],&end) / 100.0;
+						settings.dynamicCutoff = false;
+
+						if(*end)
+							goto bad_arg;
+					}
+					else
+					{
+						settings.cutoff = 0;
+						settings.dynamicCutoff = false;
+					}
 				continue;
 
 				case 's':
@@ -121,54 +138,6 @@ int main(int argc, char **argv)
 
 					settings.selectRange = true;
 				}
-				continue;
-
-				case 'p':
-				case 'P':
-					if(argv[i][2])
-						goto bad_arg;
-
-					settings.mode = PREDICT;
-				continue;
-
-				case 'a':
-				case 'A':
-					if(argv[i][2])
-						goto bad_arg;
-
-					settings.mode = PREDICT_COMP;
-				continue;
-
-				case 'n':
-				case 'N':
-					if(argv[i][2])
-						goto bad_arg;
-
-					settings.mode = PREDICT_COMP_NORMAL;
-				continue;
-
-				case 'v':
-				case 'V':
-					if(argv[i][2])
-						goto bad_arg;
-
-					settings.verbose = !settings.verbose;
-				continue;
-
-				case 'q':
-				case 'Q':
-					if(argv[i][2])
-						goto bad_arg;
-
-					settings.concise = !settings.concise;
-				continue;
-
-				case 'd':
-				case 'D':
-					if(argv[i][2])
-						goto bad_arg;
-
-					settings.debug = true;
 				continue;
 
 				case 'o':
@@ -195,25 +164,23 @@ int main(int argc, char **argv)
 				}
 				continue;
 
-				case 't':
-				case 'T':
-					if((argv[i][2] == 'd' || argv[i][2] == 'D') && !argv[i][3])
-						settings.dynamicCutoff = true;
-					else if(argv[i][2])
-					{
-						char *end;
-						settings.cutoff = strtod(&argv[i][2],&end) / 100.0;
-						settings.dynamicCutoff = false;
+				case '%':
+				{
+					char *end;
+					settings.percentile = strtoi(&argv[i][2],&end, 10);
 
-						if(*end)
-							goto bad_arg;
-					}
-					else
+					if(!argv[i][2] || *end)
+						goto bad_arg;
+					if(settings.percentile < 0 || settings.percentile > 100)
 					{
-						settings.cutoff = 0;
-						settings.dynamicCutoff = false;
+						fprintf(stderr, "Bad argument: '%s': %d is not a percentage\n", argv[i], settings.percentile);
+						return EXIT_FAILURE;
 					}
+					if(settings.percentile > 50)
+						settings.percentile = 100 - settings.percentile;
+				}
 				continue;
+
 
 				case 'r':
 				case 'R':
@@ -231,6 +198,31 @@ int main(int argc, char **argv)
 
 					settings.mode = ROLL;
 				}
+				continue;
+
+				SWITCH('p', 'P')
+					settings.mode = PREDICT;
+				continue;
+
+				case 'c':
+				case 'C':
+				{
+					char *end;
+					settings.compareValue = strtoi(&argv[i][2],&end, 10);
+
+					if(!argv[i][2] || *end)
+						goto bad_arg;
+
+					settings.mode = COMPARE;
+				}
+				continue;
+
+				SWITCH('a', 'A')
+					settings.mode = PREDICT_COMP;
+				continue;
+
+				SWITCH('n', 'N')
+					settings.mode = PREDICT_COMP_NORMAL;
 				continue;
 
 				default:

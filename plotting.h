@@ -258,19 +258,22 @@ void p_header(struct prob p, double *mu, double *sigma)
 {
 	double avg = 0.0;
 	double var = 0.0;
-	double p25 = 0.0;
-	double p75 = 0.0;
 	double sum = 0.0;
+
+	double pL = 0.0;
+	double pH = 0.0;
+	double lp = settings.percentile / 100.0;
+	double hp = (100 - settings.percentile) / 100.0;
 
 	for (int i = 0; i < p.len; i++)
 	{
 		avg += p.p[i] * (i + p.low);
 
 		// intra-bucket linear interpolation
-		if(sum < 0.25 && sum + p.p[i] >= 0.25)
-			p25 = (p.low + i) + (.25 - sum) / p.p[i];
-		if(sum < 0.75 && sum + p.p[i] >= 0.75)
-			p75 = (p.low + i) + (.75 - sum) / p.p[i];
+		if(sum < lp && sum + p.p[i] >= lp)
+			pL = (p.low + i) + (lp - sum) / p.p[i];
+		if(sum < hp && sum + p.p[i] >= hp)
+			pH = (p.low + i) + (hp - sum) / p.p[i];
 
 		sum += p.p[i];
 	}
@@ -281,7 +284,7 @@ void p_header(struct prob p, double *mu, double *sigma)
 	}
 
 	printf("Avg: %f\tVariance: %f\tSigma: %f\n", avg, var, sqrt(var));
-	printf("Min: %d\t 25%%: %f\t 75%%: %f\tMax: %d\n", p.low, p25, p75, p.low + p.len - 1);
+	printf("Min: %d\t %u%%: %f\t %u%%: %f\tMax: %d\n", p.low, settings.percentile, pL, 100 - settings.percentile, pH, p.low + p.len - 1);
 
 	if(mu)
 		*mu = avg;
