@@ -1,8 +1,13 @@
+// d_range.h: Implements the d_range() function that translates d_t to rl_t
 #pragma once
 #include "ranges.h"
 #include "parse.h"
 #include "settings.h"
 
+/** Determines the value range of a die expression
+	@param d a non-NULL die expression
+	@returns The range of values d may take
+*/
 rl_t d_range(d_t *d)
 {
 	switch(d->op)
@@ -15,18 +20,10 @@ rl_t d_range(d_t *d)
 
 		case 'x':
 		case '*':
-		{
-			rl_t l = d_range(d->biop.l), r = d_range(d->biop.r);
-
-			return range_mul(l.low, l.high, r.low, r.high);
-		}
+			return range_mul(d_range(d->biop.l), d_range(d->biop.r));
 
 		case '/':
-		{
-			rl_t l = d_range(d->biop.l), r = d_range(d->biop.r);
-
-			return range_div(l.low, l.high, r.low, r.high);
-		}
+			return range_div(d_range(d->biop.l), d_range(d->biop.r));
 
 		case '+':
 		{
@@ -59,9 +56,7 @@ rl_t d_range(d_t *d)
 		}
 
 		case '~':
-		{
 			return d_range(d->reroll.v);
-		}
 
 		case '?':
 		{

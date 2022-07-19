@@ -200,7 +200,7 @@ static struct prob p_trim(struct prob p, struct plotinfo pi)
 	if(settings.selectRange)
 	{
 		start = max(start, settings.rLow - p.low);
-		end = max(end, (p.low + p.len - 1) - settings.rHigh);
+		end = max(end, p_h(p) - settings.rHigh);
 	}
 
 	return (struct prob){ .len = p.len - start - end, .low = p.low + start, .p = p.p + start };
@@ -284,7 +284,7 @@ void p_header(struct prob p, double *mu, double *sigma)
 	}
 
 	printf("Avg: %f\tVariance: %f\tSigma: %f\n", avg, var, sqrt(var));
-	printf("Min: %d\t %u%%: %f\t %u%%: %f\tMax: %d\n", p.low, settings.percentile, pL, 100 - settings.percentile, pH, p.low + p.len - 1);
+	printf("Min: %d\t %u%%: %f\t %u%%: %f\tMax: %d\n", p.low, settings.percentile, pL, 100 - settings.percentile, pH, p_h(p));
 
 	if(mu)
 		*mu = avg;

@@ -140,7 +140,7 @@ struct prob p_negs(struct prob p)
 		*r = v;
 	}
 
-	p.low = -(p.low + p.len - 1);
+	p.low = -p_h(p);
 	return p;
 }
 
@@ -180,7 +180,7 @@ void p_free(struct prob p)
 /* Emulates rolling on p and rerolling once if the value is in the given signed set. In-place. */
 struct prob p_rerolls(struct prob p, bool neg, struct set set)
 {
-	if(set_hasAll(set, p.low, p.low + p.len - 1) || !set_hasAny(set, p.low, p.low + p.len - 1))
+	if(set_hasAll(set, p.low, p_h(p)) || !set_hasAny(set, p.low, p_h(p)))
 		return p;
 
 	double prr = 0.0;
@@ -203,8 +203,8 @@ struct prob p_rerolls(struct prob p, bool neg, struct set set)
 /* Like p_rerolls, with unlimited rerolls. */
 struct prob p_sans(struct prob p, bool neg, struct set set)
 {
-	bool none = !set_hasAny(set, p.low, p.low + p.len - 1);
-	bool all  = set_hasAll(set, p.low, p.low + p.len - 1);
+	bool none = !set_hasAny(set, p.low, p_h(p));
+	bool all  = set_hasAll(set, p.low, p_h(p));
 
 	if(neg ? all : none)
 	// no rerolls can take place
@@ -289,7 +289,7 @@ struct prob p_adds(struct prob l, struct prob r)
 /* Emulates rolling on l and r, then multiplying the results. */
 struct prob p_cmul(struct prob l, struct prob r)
 {
-	rl_t res = range_mul(l.low, p_h(l), r.low, p_h(r));
+	rl_t res = range_mul(range_lim(l.low, p_h(l)), range_lim(r.low, p_h(r)));
 	double *p = xcalloc(res.len, sizeof(double));
 
 	for (int i = 0; i < l.len; i++)
@@ -317,7 +317,7 @@ struct prob p_cdiv(struct prob l, struct prob r)
 	if(r.len == 1 && r.low == 0)
 		eprintf("Division by constant 0.\n");
 
-	rl_t res = range_div(l.low, p_h(l), r.low, p_h(r));
+	rl_t res = range_div(range_lim(l.low, p_h(l)), range_lim(r.low, p_h(r)));
 	int len = res.high - res.low + 1;
 
 	double *p = xcalloc(len, sizeof(double));
@@ -527,11 +527,12 @@ struct prob p_cuts(struct prob p, int l, int r)
 /* stack-allocated p_constant() */
 #define P_CONST(x) (struct prob){ .low = x, .len = 1, .p = (double[]){ 1.0 } }
 
+/* Simulates rolling on p, adding another roll to the maximum result and subtracting another roll from the minimum result. In-place. */
 struct prob p_explodes(struct prob p)
 {
 	assert(p.len > 1);
 
-	struct prob exp = p_add(p, P_CONST(p.low + p.len - 1));
+	struct prob exp = p_add(p, P_CONST(p_h(p)));
 	struct prob imp = p_adds(p_constant(p.low), p_negs(p_dup(p)));
 	double Pmin = p.p[0];
 	double Pmax = p.p[p.len - 1];
@@ -545,6 +546,7 @@ struct prob p_explodes(struct prob p)
 	return p_merges(p_merges(p, exp, Pmax), imp, Pmin);
 }
 
+/* Creates a probability distribution such that P(x=1) = prob, and P(x=0) = 1-prob  */
 struct prob p_bool(double prob)
 {
 	if(prob == 0)
@@ -561,7 +563,7 @@ struct prob p_bool(double prob)
 }
 
 /* P(l < r) */
-struct prob p_less(struct prob l, struct prob r)
+double p_lt(struct prob l, struct prob r)
 {
 	double prob = 0.0;
 
@@ -581,10 +583,10 @@ struct prob p_less(struct prob l, struct prob r)
 		prob += l.p[i] * pgt;
 	}
 
-	return p_bool(prob);
+	return prob;
 }
 
-/** Determines P(x > 0) */
+/* P(x > 0) */
 double p_true(struct prob x)
 {
 	double prob = 0;
@@ -595,6 +597,7 @@ double p_true(struct prob x)
 	return prob;
 }
 
+/* Simulates rolling on l, then replacing any values <= 0 with a roll on r. In-place. */
 struct prob p_coalesces(struct prob l, struct prob r)
 {
 	if(l.low > 0)
@@ -615,8 +618,8 @@ struct prob p_coalesces(struct prob l, struct prob r)
 	return p_merges(p_cuts(l, i, 0), r, 1 - p);
 }
 
-/** Multiplies every probability of p by k.
- * 	Ignores axiom (1).
+/* Multiplies every probability of p by k. In-place.
+	Ignores axiom (1).
  */
 struct prob p_scales(struct prob p, double k)
 {
@@ -628,6 +631,7 @@ struct prob p_scales(struct prob p, double k)
 	return p;
 }
 
+/* Simulates rolling on cond, returning 'then' if the result is > 0 and 'otherwise' otherwise. In-place. */
 struct prob p_terns(struct prob cond, struct prob then, struct prob otherwise)
 {
 	double p = p_true(cond);
@@ -672,7 +676,7 @@ struct prob p_explode_ns(const struct prob p, int n)
 	return p_merges(res, (struct prob){ .len = p.len, .low = p.low + max * n, .p = p.p }, pcur);
 }
 
-/** Emulates rolling on l and r, then selecting the higher value. In-place. */
+/* Emulates rolling on l and r, then selecting the higher value. In-place. */
 struct prob p_maxs(struct prob l, struct prob r)
 {
 	struct prob res;
@@ -708,7 +712,7 @@ struct prob p_maxs(struct prob l, struct prob r)
 	return res;
 }
 
-/** Emulates rolling on l and r, then selecting the lower value. In-place. */
+/* Emulates rolling on l and r, then selecting the lower value. In-place. */
 struct prob p_mins(struct prob l, struct prob r)
 {
 	struct prob res;

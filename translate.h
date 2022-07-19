@@ -51,9 +51,9 @@ p_t translate(d_t *d)
 			return p_explode_ns(translate(d->explode.v), d->explode.rounds);
 
 		case '<':
-			return p_less(translate(d->biop.l), translate(d->biop.r));
+			return p_bool(p_lt(translate(d->biop.l), translate(d->biop.r)));
 		case '>':
-			return p_less(translate(d->biop.r), translate(d->biop.l));
+			return p_bool(p_lt(translate(d->biop.r), translate(d->biop.l)));
 
 		case '?':
 			return p_coalesces(translate(d->biop.l), translate(d->biop.r));

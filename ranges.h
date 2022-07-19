@@ -1,3 +1,4 @@
+// ranges.h: Implements operations on ranges
 #pragma once
 #include "util.h"
 
@@ -49,9 +50,8 @@ rl_t range_lim(signed int low, signed int high)
 }
 
 /* Determines the range of results of (llow..lhigh)/(rlow..rhigh) */
-rl_t range_div(signed int llow, signed int lhigh, signed int rlow, signed int rhigh)
+rl_t range_div(rl_t l, rl_t r)
 {
-	rl_t l = range_lim(llow, lhigh), r = range_lim(rlow, rhigh);
 	#define DIV(a,b) b ? (a/b) : 0
 
 	return _range_fin((rl_t){
@@ -66,10 +66,8 @@ rl_t range_div(signed int llow, signed int lhigh, signed int rlow, signed int rh
 }
 
 /* Determines the range of results of (llow..lhigh)*(rlow..rhigh) */
-rl_t range_mul(signed int llow, signed int lhigh, signed int rlow, signed int rhigh)
+rl_t range_mul(rl_t l, rl_t r)
 {
-	rl_t l = range_lim(llow, lhigh), r = range_lim(rlow, rhigh);
-
 	return _range_fin((rl_t){
 		.lneg = min0(l.lneg * r.hpos, l.hpos * r.lneg),
 		.hneg = max(l.hneg * r.lpos, l.lpos * r.hneg),
