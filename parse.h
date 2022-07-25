@@ -2,22 +2,42 @@
 !! INT 'd' INT... is expanded to INT x d INT...
 	this allows i.e. 2d20~1 to be interpreted as the more sensible 2*(1d20~1) instead of (2d20)~1
 
-intls := INT
-	| intls , INT
+INT := [1-9]+ ;
+n := INT | 0+ | - INT ;
+
+range := n
+	| n - n
 ;
-expr := INT
-	| 'd' INT
-	| expr + expr
-	| expr - expr
-	| expr '*' expr
-	| expr 'x' expr
-	| expr !
-	| expr $ INT
-	| expr ^ INT / INT
-	| expr _ INT / INT
-	| expr ~ intls
-	| expr \ intls
-	| ( expr )
+
+set := range
+	| set , range
+;
+
+die := n
+	| 'd' NUM
+	| die ~ set
+	| die ~ ! set
+	| die \ set
+	| die \ ! set
+	| die ^ NUM / NUM
+	| die ^ NUM
+	| die _ NUM / NUM
+	| die _ NUM
+	| die !
+	| die $ NUM
+	| die $
+	| die x die
+	| die * die
+	| die / die
+	| die + die
+	| die - die
+	| die ^ ^ die
+	| die _ _ die
+	| die > die
+	| die < die
+	| die ? die
+	| die ? die : die
+	| ( die )
 ;
 */
 #pragma once
@@ -414,14 +434,13 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				int sel = ls->num;
 				int of;
 
-				if(lex() != '/')
+				if(lexm('/'))
+					of = lexc(INT);
+				else
 				{
-					unlex();
 					of = sel;
 					sel = 1;
 				}
-				else
-					of = lexc(INT);
 
 				if(sel >= of)
 					err("Invalid selection values.");

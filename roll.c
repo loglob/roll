@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 				case 'T':
 					if((argv[i][2] == 'd' || argv[i][2] == 'D') && !argv[i][3])
 						settings.dynamicCutoff = true;
-					if((argv[i][2] == 'g' || argv[i][2] == 'G') && !argv[i][3])
+					else if((argv[i][2] == 'g' || argv[i][2] == 'G') && !argv[i][3])
 						settings.globalCutoff = true;
 					else if(argv[i][2])
 					{
@@ -330,7 +330,7 @@ int main(int argc, char **argv)
 		d_free(d);
 	}
 
-	if(settings.compare)
+	if(settings.mode == PREDICT_COMP && settings.compare)
 	{
 		p_free(*settings.compare);
 		free(settings.compare);

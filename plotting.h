@@ -214,7 +214,7 @@ void p_plot(struct prob p)
 	int mw = max(numw(p.low), numw(p_h(p)));
 	double pmax = p.p[0];
 
-	if(settings.compare && settings.compare->p[0] > pmax)
+	if(settings.mode == PREDICT_COMP && settings.compare && settings.compare->p[0] > pmax)
 		pmax = settings.compare->p[0];
 
 	for (int i = 1; i < p.len; i++)
@@ -222,7 +222,7 @@ void p_plot(struct prob p)
 		if(p.p[i] > pmax)
 			pmax = p.p[i];
 
-		if(settings.compare)
+		if(settings.mode == PREDICT_COMP && settings.compare)
 		{
 			double c = probof(*settings.compare, i + p.low);
 
@@ -234,7 +234,7 @@ void p_plot(struct prob p)
 	struct plotinfo pi = plot_init("%*d", mw, pmax);
 	p = p_trim(p, pi);
 
-	if(settings.compare)
+	if(settings.mode == PREDICT_COMP && settings.compare)
 	{
 		p_t c = p_trim(*settings.compare, pi);
 		int hi = max(p_h(p), p_h(c));
