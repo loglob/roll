@@ -442,11 +442,15 @@ struct prob p_muls(struct prob l, struct prob r)
 /* Emulates rolling on p of times, and then selecting the highest/lowest value. In-place. */
 struct prob p_selectOne(struct prob p, int of, bool selHigh)
 {
-	// sum[n] ::= Sum(p.p[i] | i <= n)
-	assert(of >= 2);
+	assert(of > 0);
+
+	if(of == 1)
+		return p;
+
 	int *c = chooseBuf(of);
 	#define choose(N, k) ((k <= 0 || k >= N) ? 1 : c[k-1])
 
+	// sum[n] := Sum(p.p[i] | i <= n)
 	double *sum = xcalloc(p.len, sizeof(double));
 	sum[0] = p.p[0];
 
@@ -477,14 +481,13 @@ struct prob p_selectOne_bust(struct prob p, int of)
 {
 	assert(p.len);
 
-	int half = of - of/2;
 	int *choose = chooseBuf(of);
 	// p without 1s
 	struct prob p2 = p_sans(p_dup(p), false, SINGLETON(p.low, p.low));
 	struct prob total = p_constant(p.low - 1);
 
 	// range over # of 1s
-	for (int n = 0; n < half; n++)
+	for (int n = 0; n <= of / 2; n++)
 	{
 		// prob. of rolling n 1s
 		double p_n = pow(*p.p, n) * pow(1 - *p.p, of - n) * (n ? choose[n-1] : 1);
