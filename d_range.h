@@ -111,6 +111,13 @@ rl_t d_range(d_t *d)
 			return range_lim(r.low * d->select.sel, r.high * d->select.sel);
 		}
 
+		case UP_BANG:
+		{
+			rl_t r = d_range(d->select.v);
+
+			return range_lim(r.low - 1, r.high);
+		}
+
 		case UPUP:
 		{
 			rl_t l = d_range(d->biop.l), r = d_range(d->biop.l);

@@ -439,7 +439,7 @@ struct prob p_muls(struct prob l, struct prob r)
 	return sum;
 }
 
-/* Emulates rolling on p of times, and then selecting the highest/lowest value. */
+/* Emulates rolling on p of times, and then selecting the highest/lowest value. In-place. */
 struct prob p_selectOne(struct prob p, int of, bool selHigh)
 {
 	// sum[n] ::= Sum(p.p[i] | i <= n)
@@ -469,7 +469,38 @@ struct prob p_selectOne(struct prob p, int of, bool selHigh)
 	free(c);
 
 	return p;
+	#undef choose
+}
 
+/* Like p_selectOne with selHigh=true, but 'goes bust' if majority of rolls are lowest. Leaves p intact. */
+struct prob p_selectOne_bust(struct prob p, int of)
+{
+	assert(p.len);
+
+	int half = of - of/2;
+	int *choose = chooseBuf(of);
+	// p without 1s
+	struct prob p2 = p_sans(p_dup(p), false, SINGLETON(p.low, p.low));
+	struct prob total = p_constant(p.low - 1);
+
+	// range over # of 1s
+	for (int n = 0; n < half; n++)
+	{
+		// prob. of rolling n 1s
+		double p_n = pow(*p.p, n) * pow(1 - *p.p, of - n) * (n ? choose[n-1] : 1);
+
+		// value distribution for that amount of 1s
+		struct prob vals = p_selectOne(p_dup(p2), of - n, true);
+
+		total = p_merges(total, vals, p_n);
+		// keep track of covered cases
+		total.p[0] -= p_n;
+	}
+
+	p_free(p2);
+	free(choose);
+
+	return total;
 }
 
 /* Emulates rolling on p of times, then adding the sel highest/lowest rolls. */

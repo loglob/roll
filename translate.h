@@ -38,6 +38,17 @@ p_t translate(d_t *d)
 		case '_':
 			return p_select(translate(d->select.v), d->select.sel, d->select.of, d->op == '^');
 
+		case UP_BANG:
+		{
+			struct prob p = translate(d->select.v);
+			assert(d->select.sel == 1);
+
+			struct prob res = p_selectOne_bust(p, d->select.of);
+			p_free(p);
+
+			return res;
+		}
+
 		case '~':
 			return p_rerolls(translate(d->reroll.v), d->reroll.neg, d->reroll.set);
 
@@ -130,6 +141,11 @@ void d_print(d_t *d)
 			printf(" ^%u/%u", d->select.sel, d->select.of);
 		break;
 
+		case UP_BANG:
+			d_print(d->select.v);
+			printf(" ^!%u", d->select.of);
+		break;
+
 		case '~':
 		case '\\':
 			d_print(d->select.v);
@@ -217,6 +233,11 @@ void d_printTree(struct dieexpr *d, int depth)
 
 		case '^':
 			printf("SELECT %u HIGHEST FROM %u\n", d->select.sel, d->select.of);
+			d_printTree(d->select.v, depth + 1);
+		break;
+
+		case UP_BANG:
+			printf("SELECT HIGHEST FROM %u WITHOUT GOING BUST\n", d->select.of);
 			d_printTree(d->select.v, depth + 1);
 		break;
 

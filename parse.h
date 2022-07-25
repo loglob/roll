@@ -21,6 +21,7 @@ die := n
 	| die \ ! set
 	| die ^ NUM / NUM
 	| die ^ NUM
+	| die ^ ! NUM
 	| die _ NUM / NUM
 	| die _ NUM
 	| die !
@@ -55,10 +56,12 @@ die := n
 #define ZERO ((char)-3)
 // equivalent to (char)-4
 #define UPUP '\xFC'
-// equivalent to (char)-3
+// equivalent to (char)-5
 #define __ '\xFB'
+// equivalent to (char)-6
+#define UP_BANG '\xFA'
 #define BIOPS "+-*x/<>" "\xFC\xFB"
-#define SELECT "^_"
+#define SELECT "^_\xFA"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!$"
 #define SPECIAL BIOPS UOPS "d,/()?:"
@@ -428,8 +431,18 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 					unlex();
 					return left;
 				}
+				else if(op == '^' && nx == '!')
+				{
+					int n = lexc(INT);
+
+					if(n <= 1)
+						err("Invalid selection value");
+
+					left = d_clone((struct dieexpr){ .op = UP_BANG, .select= { .v = left, .of = n, .sel = 1 } });
+					continue;
+				}
 				else if(nx != INT)
-					badtk(INT, op);
+					badtk(INT, op, op == '^' ? '!' : -1);
 
 				int sel = ls->num;
 				int of;

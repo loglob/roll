@@ -230,6 +230,8 @@ bool set_hasAny(struct set s, signed int start, signed int end)
 
 #define set_has(set, key) set_hasAll(set, key, key)
 
+#define SINGLETON(s,e) (struct set){ (struct range[1]){ { s,e } }, 1 }
+
 /** Determines whether the given set is empty. */
 bool set_empty(struct set set)
 {

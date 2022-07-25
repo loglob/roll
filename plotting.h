@@ -350,11 +350,11 @@ void p_debug(struct prob p)
 	printf("Sum: %.*f%%\n", settings.precision, sum * 100);
 
 	if(!a0)
-		printf("Function breaks axiom (0)\nIts Image is not a subset of ℚ⁺\n");
+		printf("Function breaks axiom (0): Its Image is not a subset of ℚ⁺\n");
 	if(sum < 0.9999995 || sum >= 1.0000005)
-		printf("Function breaks axiom (1)\nThe sum its image isn't 1.\n");
+		printf("Function breaks axiom (1): The of sum its image isn't 1.\n");
 	if(p.p[0] == 0)
-		printf("Function breaks axiom (2)\np(p_ℓ) = 0\n");
+		printf("Function breaks axiom (2): p(p_ℓ) = 0\n");
 	if(p.p[p.len - 1] == 0)
-		printf("Function breaks axiom (3)\np(p_h) = 0\n");
+		printf("Function breaks axiom (3): p(p_h) = 0\n");
 }

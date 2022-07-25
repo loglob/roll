@@ -91,6 +91,7 @@ int sim(struct dieexpr *d)
 
 		case '^':
 		case '_':
+		case UP_BANG:
 		{
 			int *buf = xcalloc(sizeof(int), d->select.of);
 
@@ -101,7 +102,26 @@ int sim(struct dieexpr *d)
 			int *selbuf = buf + ((d->op == '_') ? 0 : (d->select.of - d->select.sel));
 			int sum = sumls(selbuf, d->select.sel);
 
-			if(settings.verbose)
+			if(d->op == UP_BANG)
+			{
+				rl_t lim = d_range(d->select.v);
+
+				for (int i = 0; i < d->select.of - d->select.of/2; i++)
+				{
+					if(buf[i] != lim.low)
+						goto not_bust;
+				}
+
+				if(settings.verbose)
+				{
+					printf("Got ");
+					prls(buf, d->select.of);
+					printf(" and went bust\n");
+				}
+
+				sum = lim.low - 1;
+			}
+			else not_bust: if(settings.verbose)
 			{
 				printf("Got ");
 				prls(buf, d->select.of);

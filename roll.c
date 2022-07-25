@@ -61,6 +61,7 @@ int main(int argc, char **argv)
 						"	D_n/n Selects the n lowest values out of n tries.\n"
 						"	D^n   Identical to D^1/n.\n"
 						"	D_n   Identical to D_1/n.\n"
+						"	D^!n   Like D^n, but returns 1 less than D's minimum if half or more dice have rolled their minimum value.\n"
 						"	D!    Rolls D with exploding dice, so another roll of D is added to the maximum value\n"
 						"         	and another roll of D is subtracted from the minimum value.\n"
 						"	D$n   Like D! but only allows explosions, not implosions, so only maximum rolls are affected.\n"
