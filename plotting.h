@@ -48,6 +48,9 @@ bool d_boolean(d_t *d)
 	{
 		case '<':
 		case '>':
+		case GT_EQ:
+		case LT_EQ:
+		case '=':
 			return true;
 
 		default:

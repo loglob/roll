@@ -596,26 +596,35 @@ struct prob p_bool(double prob)
 	}
 }
 
-/* P(l < r) */
-double p_lt(struct prob l, struct prob r)
+/* P(x >= k) */
+double p_geqK(int k, struct prob x)
+{
+	double pgt = 0;
+
+	// start at equivalent index
+	for (int j = max(0, k - x.low); j < x.len; j++)
+		pgt += x.p[j];
+
+	return pgt;
+}
+
+/* P(l <= r) */
+double p_leq(struct prob l, struct prob r)
 {
 	double prob = 0.0;
 
 	for (int i = 0; i < l.len; i++)
-	{
-		// P(l > r[i])
-		double pgt = 0;
-		// equivalent index in r
-		int j = i + 1 + l.low - r.low;
+		prob += l.p[i] * p_geqK(l.low + i, r);
 
-		for (; j < r.len; j++)
-		{
-			if(j >= 0)
-				pgt += r.p[j];
-		}
+	return prob;
+}
 
-		prob += l.p[i] * pgt;
-	}
+double p_eq(struct prob l, struct prob r)
+{
+	double prob = 0.0;
+
+	for (int i = 0; i < l.len; i++)
+		prob += l.p[i] * probof(r, i + l.low);
 
 	return prob;
 }

@@ -60,11 +60,17 @@ die := n
 #define __ '\xFB'
 // equivalent to (char)-6
 #define UP_BANG '\xFA'
-#define BIOPS "+-*x/<>" "\xFC\xFB"
+// equivalent to (char)-7
+#define LT_EQ '\xF9'
+// equivalent to (char)-8
+#define GT_EQ '\xF8'
+#define BIOPS "+-*x/<>=" "\xFC\xFB\xF9\xF8"
 #define SELECT "^_\xFA"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!$"
 #define SPECIAL BIOPS UOPS "d,/()?:"
+#define MULTITOKS_STR "^^", "__", "^!", "<=", ">="
+#define MULTITOKS_CHR UPUP, __, UP_BANG, LT_EQ, GT_EQ
 
 /* represents the state of the lexer */
 typedef struct lexstate
@@ -121,6 +127,9 @@ static const char *tkstr(char tk)
 		case ZERO: return "zero";
 		case UPUP: return "^^";
 		case __: return "__";
+		case UP_BANG: return "^!";
+		case LT_EQ: return "<=";
+		case GT_EQ: return ">=";
 
 		default:
 			sprintf(retBuf, isalnum(tk) ? "'%c'" : "%c", tk);
@@ -204,6 +213,9 @@ static void _unexptk(ls_t ls, int first, ...)
 
 #pragma region lexer functions
 
+static const char mtok_str[][2] = { MULTITOKS_STR };
+static const char mtok_chr[] = { MULTITOKS_CHR };
+
 static char _lex(struct lexstate *ls)
 {
 	char i;
@@ -238,7 +250,20 @@ static char _lex(struct lexstate *ls)
 		return ls->last = NUL;
 	}
 	if(strchr(SPECIAL, i))
+	{
+		int next;
+
+		if((next = *ls->pos)) for(size_t m = 0; m < sizeof(mtok_chr); m++)
+		{
+			if(i == mtok_str[m][0] && next == mtok_str[m][1])
+			{
+				ls->pos++;
+				return ls->last = mtok_chr[m];
+			}
+		}
+
 		return ls->last = i;
+	}
 
 	lerrf(*ls, "Unknown token: '%c'", i);
 	__builtin_unreachable();
@@ -321,6 +346,9 @@ static int precedence(char op)
 			return 20;
 		case '<':
 		case '>':
+		case LT_EQ:
+		case GT_EQ:
+		case '=':
 			return 10;
 		case UPUP:
 		case __:
@@ -420,31 +448,21 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 		char op;
 		switch(op = lex())
 		{
+			case UP_BANG:
+			{
+				int n = lexc(INT);
+
+				if(n <= 1)
+					err("Invalid selection value");
+
+				left = d_clone((struct dieexpr){ .op = UP_BANG, .select= { .v = left, .of = n, .sel = 1 } });
+			}
+			continue;
+
 			case '^':
 			case '_':
 			{
-				int nx = lex();
-
-				if(nx == op)
-				{
-					ls->last = (op == '^') ? UPUP : __;
-					unlex();
-					return left;
-				}
-				else if(op == '^' && nx == '!')
-				{
-					int n = lexc(INT);
-
-					if(n <= 1)
-						err("Invalid selection value");
-
-					left = d_clone((struct dieexpr){ .op = UP_BANG, .select= { .v = left, .of = n, .sel = 1 } });
-					continue;
-				}
-				else if(nx != INT)
-					badtk(INT, op, op == '^' ? '!' : -1);
-
-				int sel = ls->num;
+				int sel = lexc(INT);
 				int of;
 
 				if(lexm('/'))

@@ -62,9 +62,15 @@ p_t translate(d_t *d)
 			return p_explode_ns(translate(d->explode.v), d->explode.rounds);
 
 		case '<':
-			return p_bool(p_lt(translate(d->biop.l), translate(d->biop.r)));
+			return p_bool(1.0 - p_leq(translate(d->biop.r), translate(d->biop.l)));
 		case '>':
-			return p_bool(p_lt(translate(d->biop.r), translate(d->biop.l)));
+			return p_bool(1.0 - p_leq(translate(d->biop.l), translate(d->biop.r)));
+		case LT_EQ:
+			return p_bool(p_leq(translate(d->biop.l), translate(d->biop.r)));
+		case GT_EQ:
+			return p_bool(p_leq(translate(d->biop.r), translate(d->biop.l)));
+		case '=':
+			return p_bool(p_eq(translate(d->biop.l), translate(d->biop.r)));
 
 		case '?':
 			return p_coalesces(translate(d->biop.l), translate(d->biop.r));
@@ -128,9 +134,12 @@ void d_print(d_t *d)
 
 		case '>':
 		case '<':
+		case LT_EQ:
+		case GT_EQ:
+		case '=':
 			putchar('(');
 			d_print(d->biop.l);
-			printf(") %c (", d->op);
+			printf(") %s (", tkstr(d->op));
 			d_print(d->biop.r);
 			putchar(')');
 		break;
@@ -215,6 +224,9 @@ void d_printTree(struct dieexpr *d, int depth)
 
 		b('>', "GREATER THAN")
 		b('<', "LESS THAN")
+		b(GT_EQ, "GREATER THAN OR EQUAL TO")
+		b(LT_EQ, "LESS THAN OR EQUAL TO")
+		b('=', "EQUAL TO")
 
 		b('+', "ADD")
 		b('-', "SUB")
