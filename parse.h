@@ -449,16 +449,6 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 		switch(op = lex())
 		{
 			case UP_BANG:
-			{
-				int n = lexc(INT);
-
-				if(n <= 1)
-					err("Invalid selection value");
-
-				left = d_clone((struct dieexpr){ .op = UP_BANG, .select= { .v = left, .of = n, .sel = 1 } });
-			}
-			continue;
-
 			case '^':
 			case '_':
 			{
@@ -470,11 +460,11 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				else
 				{
 					of = sel;
-					sel = 1;
+					sel = (op == UP_BANG) ? of - of/2 : 1;
 				}
 
-				if(sel >= of)
-					err("Invalid selection values.");
+				if(sel > of)
+					errf("Invalid selection value: '%u/%u'", sel, of);
 
 				left = d_clone((struct dieexpr){ .op = op, .select= { .v = left, .of = of, .sel = sel } });
 			}

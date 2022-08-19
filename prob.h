@@ -477,7 +477,7 @@ struct prob p_selectOne(struct prob p, int of, bool selHigh)
 }
 
 /* Like p_selectOne with selHigh=true, but 'goes bust' if majority of rolls are lowest. Leaves p intact. */
-struct prob p_selectOne_bust(struct prob p, int of)
+struct prob p_selectOne_bust(struct prob p, int sel, int of)
 {
 	assert(p.len);
 
@@ -487,7 +487,7 @@ struct prob p_selectOne_bust(struct prob p, int of)
 	struct prob total = p_constant(p.low - 1);
 
 	// range over # of 1s
-	for (int n = 0; n <= of / 2; n++)
+	for (int n = 0; n < sel; n++)
 	{
 		// prob. of rolling n 1s
 		double p_n = pow(*p.p, n) * pow(1 - *p.p, of - n) * (n ? choose[n-1] : 1);
@@ -509,11 +509,11 @@ struct prob p_selectOne_bust(struct prob p, int of)
 /* Emulates rolling on p of times, then adding the sel highest/lowest rolls. */
 struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 {
-	assert(sel < of);
-
 	// Use the MUCH faster selectOne algorithm (O(n) vs O(n!)
 	if(sel == 1)
 		return p_selectOne(p, of, selHigh);
+	if(sel == of)
+		return p_mulk(p, sel);
 
 	int *v = xcalloc(of, sizeof(int));
 	struct prob c = (struct prob){ .len = (p.len-1) * sel + 1, .low = sel };

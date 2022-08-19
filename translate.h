@@ -41,9 +41,7 @@ p_t translate(d_t *d)
 		case UP_BANG:
 		{
 			struct prob p = translate(d->select.v);
-			assert(d->select.sel == 1);
-
-			struct prob res = p_selectOne_bust(p, d->select.of);
+			struct prob res = p_selectOne_bust(p, d->select.sel, d->select.of);
 			p_free(p);
 
 			return res;
