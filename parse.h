@@ -460,7 +460,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				else
 				{
 					of = sel;
-					sel = (op == UP_BANG) ? of - of/2 : 1;
+					sel = (op == UP_BANG) ? of - of/2 + !(of%2) : 1;
 				}
 
 				if(sel > of)

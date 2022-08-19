@@ -597,7 +597,7 @@ struct prob p_bool(double prob)
 }
 
 /* P(x >= k) */
-double p_geqK(int k, struct prob x)
+double p_geqK(struct prob x, int k)
 {
 	double pgt = 0;
 
@@ -614,7 +614,7 @@ double p_leq(struct prob l, struct prob r)
 	double prob = 0.0;
 
 	for (int i = 0; i < l.len; i++)
-		prob += l.p[i] * p_geqK(l.low + i, r);
+		prob += l.p[i] * p_geqK(r, l.low + i);
 
 	return prob;
 }
