@@ -14,7 +14,7 @@ p_t translate(d_t *d)
 			return p_constant(d->constant);
 
 		case 'd':
-			return p_uniform(d->constant);
+			return p_dies(translate(d->unop));
 
 		case '(':
 			return translate(d->unop);
@@ -97,13 +97,15 @@ void d_print(d_t *d)
 		break;
 
 		case 'd':
-			printf("1d%u", d->constant);
+			printf("1d");
+			d_print(d->unop);
 		break;
 
 		case 'x':
 			if(d->biop.l->op == INT && d->biop.r->op == 'd')
 			{ // Special case for regular die strings
-				printf("%ud%u", d->biop.l->constant, d->biop.r->constant);
+				printf("%u", d->biop.l->constant);
+				d_print(d->biop.r);
 				break;
 			}
 		// fallthrough
@@ -199,7 +201,13 @@ void d_printTree(struct dieexpr *d, int depth)
 		break;
 
 		case 'd':
-			printf("1d%u\n", d->constant);
+			if(d->unop->op == INT)
+				printf("1d%u\n", d->unop->constant);
+			else
+			{
+				printf("DYNAMICALLY SIZED DIE\n");
+				d_printTree(d->unop, depth + 1);
+			}
 		break;
 
 		case '(':

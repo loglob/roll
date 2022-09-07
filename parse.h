@@ -1,8 +1,8 @@
 /* Parses the language:
-!! INT 'd' INT... is expanded to INT x d INT...
-	this allows i.e. 2d20~1 to be interpreted as the more sensible 2*(1d20~1) instead of (2d20)~1
+!! INT 'd'... is expanded to INT x d...
+	this allows i.e. 2d20~1 to be interpreted as the more sensible 2x(1d20~1) instead of (2d20)~1
 
-INT := [1-9]+ ;
+INT := [1-9][0-9]* ;
 n := INT | 0+ | - INT ;
 
 range := n
@@ -14,18 +14,18 @@ set := range
 ;
 
 die := n
-	| 'd' NUM
+	| 'd' die
 	| die ~ set
 	| die ~ ! set
 	| die \ set
 	| die \ ! set
-	| die ^ NUM / NUM
-	| die ^ NUM
-	| die ^ ! NUM
-	| die _ NUM / NUM
-	| die _ NUM
+	| die ^ INT / INT
+	| die ^ INT
+	| die ^ ! INT
+	| die _ INT / INT
+	| die _ INT
 	| die !
-	| die $ NUM
+	| die $ INT
 	| die $
 	| die x die
 	| die * die
@@ -67,7 +67,7 @@ die := n
 #define BIOPS "+-*x/<>=" "\xFC\xFB\xF9\xF8"
 #define SELECT "^_\xFA"
 #define REROLLS "~\\"
-#define UOPS SELECT REROLLS "!$"
+#define UOPS SELECT REROLLS "!$d"
 #define SPECIAL BIOPS UOPS "d,/()?:"
 #define MULTITOKS_STR "^^", "__", "^!", "<=", ">="
 #define MULTITOKS_CHR UPUP, __, UP_BANG, LT_EQ, GT_EQ
@@ -107,7 +107,7 @@ typedef struct dieexpr
 		struct { struct dieexpr *v; int rounds; } explode;
 		// valid if op in UOPS
 		struct dieexpr *unop;
-		// valid if op == INT || op == d
+		// valid if op == INT
 		int constant;
 	};
 } d_t;
@@ -394,54 +394,64 @@ static struct dieexpr *d_merge(struct dieexpr *left, char op, struct dieexpr *ri
 
 static struct dieexpr *_parse_expr(ls_t *ls);
 
+static inline struct dieexpr *_parse_atom(ls_t *ls)
+{
+	switch (lex())
+	{
+		case INT:
+		case ZERO:
+		{
+			struct dieexpr *ret = d_clone((struct dieexpr){ .op = INT, .constant = ls->num });
+
+			// peek forward
+			ls_t bak = *ls;
+
+			if(lexm('d'))
+			{
+				// insert a x token; see line 2
+				*ls = bak;
+				ls->last = 'x';
+				unlex(); // <- set unlex flag
+			}
+
+			return ret;
+		}
+
+		case 'd':
+			return d_clone((struct dieexpr){ .op = 'd', .unop = _parse_atom(ls) });
+
+		case '(':
+			ls->pdepth++;
+			return _parse_expr(ls);
+
+		case '-':
+			return d_clone((struct dieexpr)
+				{
+					.op = '(',
+					.unop = d_clone((struct dieexpr)
+					{
+						.op = '-',
+						.biop =
+						{
+							.l = d_clone((struct dieexpr){ .op = INT, .constant = 0 }),
+							.r = _parse_atom(ls)
+						}
+					})
+				});
+
+		default:
+			badtk(INT, 'd', '(');
+			__builtin_unreachable();
+	}
+}
+
 /* Iteratively parses every postfix unary operator.
 	left is optional and represents the expression the postfix is applied to.
 	Mutually recurses with _parse_expr() to parse parenthesized expressions. */
 static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 {
 	if(!left)
-	{
-		switch (lex())
-		{
-			case INT:
-			case ZERO:
-			{
-				left = d_clone((struct dieexpr){ .op = INT, .constant = ls->num });
-
-				// peek forward
-				ls_t bak = *ls;
-
-				if(lex() == 'd')
-				{
-					// insert a x token; see line 2
-					*ls = bak;
-					ls->last = 'x';
-					unlex();
-					return left;
-				}
-				else
-					unlex();
-			}
-			break;
-
-			case 'd':
-			{
-				int pips = lexc(INT);
-				left = d_clone((struct dieexpr){ .op = 'd', .constant = pips });
-			}
-			break;
-
-			case '(':
-			{
-				ls->pdepth++;
-				left = _parse_expr(ls);
-			}
-			break;
-
-			default:
-				badtk(INT, 'd', '(');
-		}
-	}
+		left = _parse_atom(ls);
 
 	for(;;)
 	{

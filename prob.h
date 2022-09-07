@@ -112,18 +112,19 @@ double probof(struct prob p, signed int num)
 		return 0.0;
 }
 
-/* Creates a uniform distribution of the range 1..n (inclusive) */
+/* Creates a uniform distribution of the range 1..n (inclusive), or n..-1 if n < 0. */
 struct prob p_uniform(int n)
 {
-	assert(n > 0);
-	double *p = xmalloc(n * sizeof(double));
+	assert(n != 0);
+	int l = abs(n);
+	double *p = xmalloc(l * sizeof(double));
 
-	for (int i = 0; i < n; i++)
-		p[i] = 1.0 / n;
+	for (int i = 0; i < l; i++)
+		p[i] = 1.0 / l;
 
 	return (struct prob){
-		.len = n,
-		.low = 1,
+		.len = l,
+		.low = n < 0 ? n : 1,
 		.p = p
 	};
 }
@@ -789,4 +790,20 @@ struct prob p_mins(struct prob l, struct prob r)
 		p_free(r);
 
 	return res;
+}
+
+/* Emulates rolling on p, then rolling a fair die with that many pips */
+struct prob p_dies(struct prob p)
+{
+	assert(p.len >= 1);
+
+	struct prob sum = p_scales(p_uniform(p.low), p.p[0]);
+
+	for (int i = 1; i < p.len; i++)
+	{
+		if(p.p[1] > 0)
+			sum = p_merges(sum, p_uniform(p.low + i), p.p[1]);
+	}
+
+	return sum;
 }

@@ -175,10 +175,11 @@ int sim(struct dieexpr *d)
 
 		case 'd':
 		{
-			int r = roll(d->constant);
+			int pips = sim(d->unop);
+			int r = roll(pips);
 
 			if(settings.verbose)
-				printf("Rolled a %d on a d%u\n", r, d->constant);
+				printf("Rolled a %d on a d%u\n", r, pips);
 
 			return r;
 		}
@@ -202,12 +203,12 @@ int sim(struct dieexpr *d)
 
 			free(buf);
 			return sum;
-		};
+		}
 
 		case INT:
 		{
 			return d->constant;
-		};
+		}
 
 		case '$':
 		{
