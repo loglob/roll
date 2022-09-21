@@ -97,7 +97,7 @@ void d_print(d_t *d)
 		break;
 
 		case 'd':
-			printf("1d");
+			putchar('d');
 			d_print(d->unop);
 		break;
 
