@@ -354,11 +354,11 @@ static int precedence(char op)
 		case __:
 			return 8;
 		case '+':
-			return 5;
+			return 6;
 		case '-':
 			return 4;
 		case '/':
-			return 3;
+			return 2;
 		case '*':
 			return 2;
 		case 'x':
@@ -382,7 +382,7 @@ static struct dieexpr *d_merge(struct dieexpr *left, char op, struct dieexpr *ri
 	int pl = precedence(left->op);
 	int p = precedence(op);
 
-	if(pl >= p)
+	if(pl > p || (pl % 2 && pl >= p))
 	{
 		left->biop.r = d_merge(left->biop.r, op, right);
 		return left;
