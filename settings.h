@@ -60,7 +60,8 @@ struct
 	int percentile;
 } settings =
 {
-	.mode = PREDICT,
+	.mode = ROLL,
+    .rolls = 1,
 	.cutoff = 0.000005,
 	.precision = 3,
 	.percentile = 25
