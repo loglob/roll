@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 						"	-w[n]    Sets the width of output.\n"
 						"	-%%n      Also calculates the nth percentile of a dice expression in -p, -n or -a mode.\n"
 						" Mode arguments:\n"
-						"	-r[n=1]  Simulates a dice expression n times.\n"
+						"	-r[n=1]  Simulates a dice expression n times. (default)\n"
 						"	-p       Prints an analysis and a histogram for a dice expression.\n"
 						"	-c[v]    Compares a dice expression to a number.\n"
 						"	-n       Compares the result percentage to a normal distribution with the same 𝜇 and 𝜎.\n"
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
 							goto bad_arg;
 					}
 					else
-						settings.rolls= 1;
+						settings.rolls = 1;
 
 					settings.mode = ROLL;
 				}
@@ -221,6 +221,7 @@ int main(int argc, char **argv)
 
 				SWITCH('a', 'A')
 					settings.mode = PREDICT_COMP;
+                    settings.compare = NULL;
 				continue;
 
 				SWITCH('n', 'N')
@@ -292,8 +293,7 @@ int main(int argc, char **argv)
 						for (int i = 0; i < p.len; i++)
 							settings.compare->p[i + 1] = normal(mu, sigma, i + p.low);
 					}
-
-					if(settings.compare)
+					if(settings.mode == PREDICT_COMP && settings.compare)
 						plot_diff(p, *settings.compare);
 					if(!settings.concise)
 						p_plot(p);
