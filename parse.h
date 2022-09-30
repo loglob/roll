@@ -67,10 +67,13 @@ die := n
 #define BIOPS "+-*x/<>=" "\xFC\xFB\xF9\xF8"
 #define SELECT "^_\xFA"
 #define REROLLS "~\\"
-#define UOPS SELECT REROLLS "!$d"
-#define SPECIAL BIOPS UOPS "d,/()?:"
+#define UOPS SELECT REROLLS "!$d("
+#define SPECIAL BIOPS UOPS ",/()?:"
 #define MULTITOKS_STR "^^", "__", "^!", "<=", ">="
 #define MULTITOKS_CHR UPUP, __, UP_BANG, LT_EQ, GT_EQ
+
+static const char mtok_str[][2] = { MULTITOKS_STR };
+static const char mtok_chr[] = { MULTITOKS_CHR };
 
 /* represents the state of the lexer */
 typedef struct lexstate
@@ -118,21 +121,22 @@ typedef struct dieexpr
 	NOT reentrant. Return value is NOT safe after subsequent calls.  */
 static const char *tkstr(char tk)
 {
-	static char retBuf[4];
+	static char retBuf[2] = {};
 
 	switch(tk)
 	{
 		case NUL: return "end of input";
 		case INT: return "a positive number";
 		case ZERO: return "zero";
-		case UPUP: return "^^";
-		case __: return "__";
-		case UP_BANG: return "^!";
-		case LT_EQ: return "<=";
-		case GT_EQ: return ">=";
 
 		default:
-			sprintf(retBuf, isalnum(tk) ? "'%c'" : "%c", tk);
+            for (size_t i = 0; i < sizeof(mtok_chr) / sizeof(*mtok_chr); i++)
+            {
+                if(mtok_chr[i] == tk)
+                    return mtok_str[i];
+            }
+
+            retBuf[0] = tk;
 		return retBuf;
 	}
 }
@@ -212,9 +216,6 @@ static void _unexptk(ls_t ls, int first, ...)
 #pragma endregion
 
 #pragma region lexer functions
-
-static const char mtok_str[][2] = { MULTITOKS_STR };
-static const char mtok_chr[] = { MULTITOKS_CHR };
 
 static char _lex(struct lexstate *ls)
 {
@@ -580,9 +581,13 @@ struct dieexpr *parse(const char *str)
 /* frees all resources used by a die expression. */
 void d_free(struct dieexpr *d)
 {
+    fprintf(stderr, "[TRACE] d_free(%p): %s\n", d, tkstr(d->op));
+
 	if(strchr(BIOPS, d->op))
 	{
+        fprintf(stderr, "   BIOP LEFT\n");
 		d_free(d->biop.l);
+        fprintf(stderr, "   BIOP RIGHT\n");
 		d_free(d->biop.r);
 	}
 	else if(strchr(SELECT, d->op))
