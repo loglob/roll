@@ -57,31 +57,10 @@ die := n
 #include <ctype.h>
 #include "util.h"
 #include "ranges.h"
-#include "set.h"
+#include "die.h"
 
-#define NUL ((char)0)
-#define INT ((char)-2)
-#define ZERO ((char)-3)
-// equivalent to (char)-4
-#define UPUP '\xFC'
-// equivalent to (char)-5
-#define __ '\xFB'
-// equivalent to (char)-6
-#define UP_BANG '\xFA'
-// equivalent to (char)-7
-#define LT_EQ '\xF9'
-// equivalent to (char)-8
-#define GT_EQ '\xF8'
-#define BIOPS "+-*x/<>=" "\xFC\xFB\xF9\xF8"
-#define SELECT "^_\xFA"
-#define REROLLS "~\\"
-#define UOPS SELECT REROLLS "!$d("
-#define SPECIAL BIOPS UOPS ",/()?:"
-#define MULTITOKS_STR "^^", "__", "^!", "<=", ">="
-#define MULTITOKS_CHR UPUP, __, UP_BANG, LT_EQ, GT_EQ
-
-static const char mtok_str[][3] = { MULTITOKS_STR };
-static const char mtok_chr[] = { MULTITOKS_CHR };
+static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=" };
+static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ };
 
 /* represents the state of the lexer */
 typedef struct lexstate
@@ -92,46 +71,11 @@ typedef struct lexstate
 	int num, pdepth;
 } ls_t;
 
-/* represents a die expression as a syntax tree */
-typedef struct dieexpr
-{
-	char op;
-	union
-	{
-		// valid if op == ':'
-		struct { struct dieexpr *cond, *then, *otherwise; } ternary;
-		// valid if op in BIOPS
-		struct { struct dieexpr *l, *r; } biop;
-		// valid if op in SELECT
-		struct { struct dieexpr *v; int sel, of; } select;
-		/** valid if op in REROLLS*/
-		struct
-		{
-			/** The die to roll on */
-			struct dieexpr *v;
-			/** The results to reroll */
-			struct set set;
-			/** If true, negates selection such that every value _not_ in set is rerolled. */
-			bool neg;
-		} reroll;
-		// valid if op is '$'
-		struct { struct dieexpr *v; int rounds; } explode;
-		// valid if op in UOPS
-		struct dieexpr *unop;
-		// valid if op == INT
-		int constant;
-	};
-} d_t;
-
-extern rl_t d_range(d_t *d);
-
-extern void d_printTree(d_t *d, int depth);
-
 #pragma region Error Handling
 
 /* A human-readable string representation of the given token.
 	NOT reentrant. Return value is NOT safe after subsequent calls.  */
-static const char *tkstr(char tk)
+const char *tkstr(char tk)
 {
 	static char retBuf[2] = {};
 
@@ -152,7 +96,6 @@ static const char *tkstr(char tk)
 		return retBuf;
 	}
 }
-
 
 /* Like _unexptk, but accepts strings instead of chars. An empty string encoded the NUL token. */
 static void _unexptks(ls_t ls, const char *first, ...)
@@ -363,15 +306,15 @@ static int precedence(char op)
 }
 
 /* Allocates a copy of the struct. */
-static struct dieexpr *d_clone(struct dieexpr opt)
+static struct die *d_clone(struct die opt)
 {
-	struct dieexpr *val = xmalloc(sizeof(opt));
+	struct die *val = xmalloc(sizeof(opt));
 	*val = opt;
 	return val;
 }
 
 /* Merges two expressions with a binary operator. Handles operator precedence. */
-static struct dieexpr *d_merge(struct dieexpr *left, char op, struct dieexpr *right)
+static struct die *d_merge(struct die *left, char op, struct die *right)
 {
 	int pl = precedence(left->op);
 	int p = precedence(op);
@@ -382,20 +325,20 @@ static struct dieexpr *d_merge(struct dieexpr *left, char op, struct dieexpr *ri
 		return left;
 	}
 	else
-		return d_clone((struct dieexpr){ .op = op, .biop = { .l = left, .r = right } });
+		return d_clone((struct die){ .op = op, .biop = { .l = left, .r = right } });
 }
 
 
-static struct dieexpr *_parse_expr(ls_t *ls);
+static struct die *_parse_expr(ls_t *ls);
 
-static inline struct dieexpr *_parse_atom(ls_t *ls)
+static inline struct die *_parse_atom(ls_t *ls)
 {
 	switch (lex())
 	{
 		case INT:
 		case ZERO:
 		{
-			struct dieexpr *ret = d_clone((struct dieexpr){ .op = INT, .constant = ls->num });
+			struct die *ret = d_clone((struct die){ .op = INT, .constant = ls->num });
 
 			// peek forward
 			ls_t bak = *ls;
@@ -412,22 +355,22 @@ static inline struct dieexpr *_parse_atom(ls_t *ls)
 		}
 
 		case 'd':
-			return d_clone((struct dieexpr){ .op = 'd', .unop = _parse_atom(ls) });
+			return d_clone((struct die){ .op = 'd', .unop = _parse_atom(ls) });
 
 		case '(':
 			ls->pdepth++;
 			return _parse_expr(ls);
 
 		case '-':
-			return d_clone((struct dieexpr)
+			return d_clone((struct die)
 				{
 					.op = '(',
-					.unop = d_clone((struct dieexpr)
+					.unop = d_clone((struct die)
 					{
 						.op = '-',
 						.biop =
 						{
-							.l = d_clone((struct dieexpr){ .op = INT, .constant = 0 }),
+							.l = d_clone((struct die){ .op = INT, .constant = 0 }),
 							.r = _parse_atom(ls)
 						}
 					})
@@ -467,7 +410,7 @@ static inline int _parse_lim(rl_t rng, ls_t *ls)
 /* Iteratively parses every postfix unary operator.
 	left is optional and represents the expression the postfix is applied to.
 	Mutually recurses with _parse_expr() to parse parenthesized expressions. */
-static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
+static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 {
 	if(!left)
 		left = _parse_atom(ls);
@@ -495,19 +438,19 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				if(sel > of)
 					errf("Invalid selection value: '%u/%u'", sel, of);
 
-				left = d_clone((struct dieexpr){ .op = op, .select= { .v = left, .of = of, .sel = sel } });
+				left = d_clone((struct die){ .op = op, .select= { .v = left, .of = of, .sel = sel } });
 			}
 			continue;
 
 			case '!':
-				left = d_clone((struct dieexpr){ .op = op, .unop = left });
+				left = d_clone((struct die){ .op = op, .unop = left });
 			continue;
 
 			case '$':
 				if(lexm(INT))
-					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = ls->num } });
+					left = d_clone((struct die){ .op = op, .explode = { .v = left, .rounds = ls->num } });
 				else
-					left = d_clone((struct dieexpr){ .op = op, .explode = { .v = left, .rounds = 1 } });
+					left = d_clone((struct die){ .op = op, .explode = { .v = left, .rounds = 1 } });
 			continue;
 
 			case '\\':
@@ -516,7 +459,6 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 				struct set set = {};
 				bool neg = lexm('!');
 				rl_t rng = d_range(left);
-				d_printTree(left, 0);
 
 				do
 				{
@@ -536,7 +478,7 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 
 				} while(lexm(','));
 
-				left = d_clone((struct dieexpr){ .op = op, .reroll = { .v = left, .set = set, .neg = neg } });
+				left = d_clone((struct die){ .op = op, .reroll = { .v = left, .set = set, .neg = neg } });
 			}
 			continue;
 
@@ -549,10 +491,10 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 
 /* Iteratively parses every infix binary operator.
 	Mutually recurses with _parse_pexpr() to parse parenthesized expressions. */
-static struct dieexpr *_parse_expr(ls_t *ls)
+static struct die *_parse_expr(ls_t *ls)
 {
 	// the expression being constructed. Always a complete expression (i.e. not missing any leaves)
-	struct dieexpr *left = _parse_pexpr(NULL, ls);
+	struct die *left = _parse_pexpr(NULL, ls);
 
 	for(;;)
 	{
@@ -564,8 +506,8 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 			left = d_merge(left, op, _parse_pexpr(NULL, ls));
 		else if(op == ':' && left->op == '?')
 		{
-			d_t *c = left->biop.l;
-			d_t *t = left->biop.r;
+			struct die *c = left->biop.l;
+			struct die *t = left->biop.r;
 
 			left->op = ':';
 			left->ternary.cond = c;
@@ -575,7 +517,7 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 		else if(op == ')' && ls->pdepth)
 		{
 			ls->pdepth--;
-			return d_clone((d_t){ .op = '(', .unop = left });
+			return d_clone((struct die){ .op = '(', .unop = left });
 		}
 		else if(ls->pdepth)
 			badtks(BIOPS, UOPS, ")", "");
@@ -587,10 +529,10 @@ static struct dieexpr *_parse_expr(ls_t *ls)
 #pragma endregion
 
 /* Parses a die expression */
-struct dieexpr *parse(const char *str)
+struct die *parse(const char *str)
 {
 	ls_t ls = (ls_t){ .pos = str };
-	struct dieexpr *d = _parse_expr(&ls);
+	struct die *d = _parse_expr(&ls);
 
 	if(ls.pdepth)
 		lbadtk(ls,')');
@@ -599,7 +541,7 @@ struct dieexpr *parse(const char *str)
 }
 
 /* frees all resources used by a die expression. */
-void d_free(struct dieexpr *d)
+void d_free(struct die *d)
 {
 	if(strchr(BIOPS, d->op))
 	{

@@ -42,7 +42,7 @@ static unsigned int hcol()
 }
 
 /* Determines if d is a boolean expression */
-bool d_boolean(d_t *d)
+bool d_boolean(struct die *d)
 {
 	switch(d->op)
 	{
@@ -156,7 +156,7 @@ static void plot_barC(struct plotinfo pi, double p, double e)
 	putchar('\n');
 }
 
-static void plot_diff(struct prob p, struct prob e)
+void plot_diff(struct prob p, struct prob e)
 {
 	double sumErr = 0, sumSqErr = 0, sumRelErr = 0, sumSqRelErr = 0;
 	int lowest = min(p.low, e.low);

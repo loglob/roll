@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 /* Transforms a dice expression to equivalent probability function. */
-p_t translate(d_t *d)
+p_t translate(struct die *d)
 {
 	switch(d->op)
 	{
@@ -88,7 +88,7 @@ p_t translate(d_t *d)
 }
 
 /* Prints the given die expression */
-void d_print(d_t *d)
+void d_print(struct die *d)
 {
 	switch(d->op)
 	{
@@ -187,7 +187,7 @@ void d_print(d_t *d)
 }
 
 /* Prints the syntax tree of the given die expression */
-void d_printTree(struct dieexpr *d, int depth)
+void d_printTree(struct die *d, int depth)
 {
 	for (int i = 0; i < depth; i++)
 		printf("|   ");

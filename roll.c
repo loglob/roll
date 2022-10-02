@@ -235,7 +235,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		struct dieexpr *d = parse(argv[i]);
+		struct die *d = parse(argv[i]);
 
 		if(settings.debug)
 			d_printTree(d, 0);

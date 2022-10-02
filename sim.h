@@ -2,7 +2,6 @@
 #pragma once
 #include "parse.h"
 #include "settings.h"
-#include "d_range.h"
 
 /* Generates a random number in [1..pips] (uniform) */
 static inline int roll(int pips)
@@ -19,7 +18,7 @@ static inline int roll(int pips)
 
 /* Simulates a die roll.
 	If v (verbose) is true outputs additional information for each roll, such as intermediate results. */
-int sim(struct dieexpr *d)
+int sim(struct die *d)
 {
 	switch(d->op)
 	{
