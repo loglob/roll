@@ -178,9 +178,9 @@ rl_t d_range(struct die *d)
 		{
 			rl_t r = d_range(d->reroll.v);
 
-			while(d->reroll.neg ^ set_has(d->reroll.set, r.low))
+			while(set_has(d->reroll.set, r.low))
 				r.low++;
-			while(d->reroll.neg ^ set_has(d->reroll.set, r.high))
+			while(set_has(d->reroll.set, r.high))
 				r.high--;
 
 			return range_lim(r.low, r.high);

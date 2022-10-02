@@ -194,7 +194,7 @@ void p_free(struct prob p)
 }
 
 /* Emulates rolling on p and rerolling once if the value is in the given signed set. In-place. */
-struct prob p_rerolls(struct prob p, bool neg, struct set set)
+struct prob p_rerolls(struct prob p, struct set set)
 {
 	if(set_hasAll(set, p.low, p_h(p)) || !set_hasAny(set, p.low, p_h(p)))
 		return p;
@@ -203,7 +203,7 @@ struct prob p_rerolls(struct prob p, bool neg, struct set set)
 
 	for (int i = 0; i < p.len; i++)
 	{
-		if(neg ^ set_has(set, p.low + i))
+		if(set_has(set, p.low + i))
 			prr += p.p[i];
 	}
 
@@ -211,21 +211,18 @@ struct prob p_rerolls(struct prob p, bool neg, struct set set)
 		return p;
 
 	for (int i = 0; i < p.len; i++)
-		p.p[i] *= !(neg ^ set_has(set, p.low + i)) + prr;
+		p.p[i] *= !set_has(set, p.low + i) + prr;
 
 	return p;
 }
 
 /* Like p_rerolls, with unlimited rerolls. */
-struct prob p_sans(struct prob p, bool neg, struct set set)
+struct prob p_sans(struct prob p, struct set set)
 {
-	bool none = !set_hasAny(set, p.low, p_h(p));
-	bool all  = set_hasAll(set, p.low, p_h(p));
-
-	if(neg ? all : none)
+	if(!set_hasAny(set, p.low, p_h(p)))
 	// no rerolls can take place
 		return p;
-	if(neg ? none : all)
+	if(set_hasAll(set, p.low, p_h(p)))
 	// only rerolls can take place
 		eprintf("Every case of the function is discarded.\n");
 
@@ -234,7 +231,7 @@ struct prob p_sans(struct prob p, bool neg, struct set set)
 
 	for (int i = 0; i < p.len; i++)
 	{
-		if(neg ^ set_has(set, p.low + i))
+		if(set_has(set, p.low + i))
 		{
 			if(i == start)
 				start++;
@@ -251,7 +248,7 @@ struct prob p_sans(struct prob p, bool neg, struct set set)
 		eprintf("Every case of the function is discarded.\n");
 
 	for (int i = 0; i < p.len; i++)
-		p.p[i] *= !(neg ^ set_has(set, p.low + i)) / (1 - prr);
+		p.p[i] *= !set_has(set, p.low + i) / (1 - prr);
 
 	if(start)
 	{
@@ -499,7 +496,7 @@ struct prob p_selectOne_bust(struct prob p, int sel, int of)
 
 	int *choose = chooseBuf(of);
 	// p without 1s
-	struct prob p2 = p_sans(p_dup(p), false, SINGLETON(p.low, p.low));
+	struct prob p2 = p_sans(p_dup(p), SINGLETON(p.low, p.low));
 	struct prob total = p_constant(p.low - 1);
 
 	// range over # of 1s

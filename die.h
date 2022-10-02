@@ -44,8 +44,6 @@ struct die
 			struct die *v;
 			/** The results to reroll */
 			struct set set;
-			/** If true, negates selection such that every value _not_ in set is rerolled. */
-			bool neg;
 		} reroll;
 		// valid if op is '$'
 		struct { struct die *v; int rounds; } explode;
@@ -173,8 +171,6 @@ void d_print(struct die *d)
 		case '\\':
 			d_print(d->select.v);
 			printf(" %c", d->op);
-			if(d->reroll.neg)
-				putchar('!');
 			set_print(d->reroll.set, stdout);
 		break;
 
@@ -285,7 +281,7 @@ void d_printTree(struct die *d, int depth)
 		goto print_rerolls;
 
 		case '~':
-			printf("REROLL ANY %s ", d->reroll.neg ? "BUT" : "OF");
+			printf("REROLL ANY OF ");
 		print_rerolls:
 			set_print(d->reroll.set, stdout);
 			putchar('\n');

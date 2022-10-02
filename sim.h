@@ -149,7 +149,7 @@ int sim(struct die *d)
 		{
 			int r1 = sim(d->reroll.v);
 
-			if(d->reroll.neg ^ set_has(d->reroll.set, r1))
+			if(set_has(d->reroll.set, r1))
 			{
 				int r2 = sim(d->reroll.v);
 
@@ -166,7 +166,7 @@ int sim(struct die *d)
 		{
 			int r = sim(d->reroll.v);
 
-			while(d->reroll.neg ^ set_has(d->reroll.set, r))
+			while(set_has(d->reroll.set, r))
 			{
 				if(settings.verbose)
 					printf("Discarded %d\n", r);

@@ -48,10 +48,10 @@ struct prob translate(struct die *d)
 		}
 
 		case '~':
-			return p_rerolls(translate(d->reroll.v), d->reroll.neg, d->reroll.set);
+			return p_rerolls(translate(d->reroll.v), d->reroll.set);
 
 		case '\\':
-			return p_sans(translate(d->reroll.v), d->reroll.neg, d->reroll.set);
+			return p_sans(translate(d->reroll.v), d->reroll.set);
 
 		case '!':
 			return p_explodes(translate(d->unop));

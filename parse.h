@@ -447,8 +447,7 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 			case '\\':
 			case '~':
 			{
-				struct set set = {};
-				bool neg = lexm('!');
+				struct set set = { .negated = lexm('!') };
 				rl_t rng = d_range(left);
 
 				do
@@ -469,7 +468,7 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 
 				} while(lexm(','));
 
-				left = d_clone((struct die){ .op = op, .reroll = { .v = left, .set = set, .neg = neg } });
+				left = d_clone((struct die){ .op = op, .reroll = { .v = left, .set = set } });
 			}
 			continue;
 

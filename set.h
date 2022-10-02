@@ -29,6 +29,8 @@ struct set
 	struct range *entries;
 	/** The amount of segments in the entries array. */
 	size_t length;
+	/** Whether the set is negated */
+	bool negated;
 };
 
 #pragma region Internal Interface
@@ -188,6 +190,14 @@ void set_free(struct set set)
 	free(set.entries);
 }
 
+/** Determines if a set contains any element in a given range. O(log n)
+	@param s The set to test
+	@param start The start of the range
+	@param end The end of the range
+	@returns Whether s contains any element between start and end, inclusive
+ */
+bool set_hasAny(struct set s, signed int start, signed int end);
+
 /** Determines if a set contains every element in a given range. O(log n)
 	@param s The set to test
 	@param start The start of the range
@@ -196,19 +206,19 @@ void set_free(struct set set)
 */
 bool set_hasAll(struct set s, signed int start, signed int end)
 {
+	if(s.negated)
+		return !set_hasAny((struct set){ s.entries, s.length, false }, start, end);
+
 	struct range *hit = _set_find(s.length, s.entries, start, NULL, NULL);
 
 	return hit && (end <= hit->end || hit == _set_find(s.length, s.entries, end, NULL, NULL));
 }
 
-/** Determines if a set contains any element in a given range. O(log n)
-	@param s The set to test
-	@param start The start of the range
-	@param end The end of the range
-	@returns Whether s contains any element between start and end, inclusive
- */
 bool set_hasAny(struct set s, signed int start, signed int end)
 {
+	if(s.negated)
+		return !set_hasAll((struct set){ s.entries, s.length, false }, start, end);
+
 	struct range *lo = NULL, *hi = NULL;
 
 	if(_set_find(s.length, s.entries, start, &lo, NULL) || _set_find(s.length, s.entries, end, NULL, &hi))
@@ -230,7 +240,7 @@ bool set_hasAny(struct set s, signed int start, signed int end)
 
 #define set_has(set, key) set_hasAll(set, key, key)
 
-#define SINGLETON(s,e) (struct set){ (struct range[1]){ { s,e } }, 1 }
+#define SINGLETON(s,e) (struct set){ (struct range[1]){ { s,e } }, 1, false }
 
 /** Determines whether the given set is empty. */
 bool set_empty(struct set set)
@@ -241,6 +251,9 @@ bool set_empty(struct set set)
 /** Prints a set to the given file stream. Formats it like the argument to \ or ~, without whitespace */
 void set_print(struct set s, FILE *f)
 {
+	if(s.negated)
+		fputc('!', f);
+
 	for (size_t i = 0; i < s.length; i++)
 	{
 		if(i)
