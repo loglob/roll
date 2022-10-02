@@ -1,7 +1,9 @@
 // sim.h: Implements a die roll simulator
 #pragma once
-#include "parse.h"
+#include "die.h"
+#include "ranges.h"
 #include "settings.h"
+#include "util.h"
 
 /* Generates a random number in [1..pips] (uniform) */
 static inline int roll(int pips)
@@ -16,8 +18,11 @@ static inline int roll(int pips)
 	return (rint % pips) + 1;
 }
 
-/* Simulates a die roll.
-	If v (verbose) is true outputs additional information for each roll, such as intermediate results. */
+/** Simulates a die roll.
+	If settings.verbose is true outputs additional information for each roll, such as intermediate results.
+	@param p A die expression
+	@returns The result of rolling d
+*/
 int sim(struct die *d)
 {
 	switch(d->op)
@@ -101,8 +106,8 @@ int sim(struct die *d)
 				buf[i] = sim(d->select.v);
 
 			qsort(buf, d->select.of, sizeof(int), intpcomp);
-			int *selbuf = buf + ((d->op == '_') ? 0 : (d->select.of - d->select.sel));
-			int sum = sumls(selbuf, d->select.sel);
+			int *selected = buf + ((d->op == '_') ? 0 : (d->select.of - d->select.sel));
+			int sum = sumls(selected, d->select.sel);
 
 			if(d->op == UP_BANG)
 			{
@@ -128,7 +133,7 @@ int sim(struct die *d)
 				printf("Got ");
 				prls(buf, d->select.of);
 				printf(" and selected ");
-				prlsd(selbuf, d->select.sel, " + ");
+				prlsd(selected, d->select.sel, " + ");
 
 				if(d->select.sel == 1)
 					putchar('\n');

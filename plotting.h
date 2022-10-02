@@ -1,20 +1,20 @@
-/* plotting.h: handles plotting of p_t functions */
+/* plotting.h: handles plotting of probability functions */
 #pragma once
 #include "prob.h"
-#include "parse.h"
+#include "die.h"
 #include "settings.h"
 #include <sys/ioctl.h>
 #include <stdio.h>
 #include <unistd.h>
 
 // contains data for plotting a function
-struct plotinfo {
+struct plotInfo {
 	// the maximum length of the preamble
-	int prlen;
+	int prLen;
 	// the preamble format string
 	const char *preamble;
 	// the amount of digits before the decimal in the percentages
-	int floatlen;
+	int floatLen;
 	// the amount of bars to draw per percent
 	double scaling;
 	// The cutoff below which values aren't displayed
@@ -41,59 +41,43 @@ static unsigned int hcol()
 	return 200;
 }
 
-/* Determines if d is a boolean expression */
-bool d_boolean(struct die *d)
-{
-	switch(d->op)
-	{
-		case '<':
-		case '>':
-		case GT_EQ:
-		case LT_EQ:
-		case '=':
-			return true;
-
-		default:
-			return false;
-	}
-}
-
 /* Determines the width of a number if printed in base10 */
 static inline int numw(signed int n)
 {
 	return n ? ((n < 0) + 1 + floor(log10((double)abs(n)))) : 1;
 }
 
-/* initializes a plotinfo structure for the given properties.
-	preamble is a printf format to be printed before each row.
-	prlen is the max length of the preamble.
-		A preamble is padded to at least this length.
-	pmax is the maximum probability in the plotted data. */
-static struct plotinfo plot_init(const char *preamble, int prlen, double pmax)
+/** initializes a plotInfo structure for the given properties.
+	@param preamble A printf format to be printed before each row.
+	@param prlen The max length of the preamble. A preamble is padded to at least this length.
+	@param pmax The maximum probability in the plotted data.
+	@returns A structure that contains information on how to format plotted data
+*/
+static struct plotInfo plot_init(const char *preamble, int prlen, double pmax)
 {
-	struct plotinfo pi = {
+	struct plotInfo pi = {
 		.preamble = preamble,
-		.prlen = prlen,
+		.prLen = prlen,
 		.cutoff = settings.cutoff
 	};
 
-	double pfact = pow(10, settings.precision);
+	double precFact = pow(10, settings.precision);
 
-	pi.floatlen = numw((int)floor(round(pmax * 100 * pfact) / pfact));
+	pi.floatLen = numw((int)floor(round(pmax * 100 * precFact) / precFact));
 
-	int plotarea = hcol()
+	int plotArea = hcol()
 	// remove preamble
 	 - prlen
 	// ": "
 	 - 2
 	// 00
-	 - pi.floatlen
+	 - pi.floatLen
 	// .000*
 	- 1 - settings.precision
 	// "% "
 	- 2;
 
-	pi.scaling = plotarea / pmax;
+	pi.scaling = plotArea / pmax;
 
 	if(settings.dynamicCutoff)
 		pi.cutoff = 1 / pi.scaling;
@@ -101,7 +85,14 @@ static struct plotinfo plot_init(const char *preamble, int prlen, double pmax)
 	return pi;
 }
 
-static bool plot_preamble(struct plotinfo pi, double p, ...)
+/** Outputs the preamble before the beginning of a row
+	@param pi returned from plot_init()
+	@param p The probability of this row
+	@param ... The arguments to the format string passed in to plot_init
+	@returns Whether this row was actually included in the output,
+		instead of being trimmed due to cutoff settings.
+*/
+static bool plot_preamble(struct plotInfo pi, double p, ...)
 {
 	va_list l;
 	va_start(l, p);
@@ -111,7 +102,7 @@ static bool plot_preamble(struct plotinfo pi, double p, ...)
 		int prlen = vprintf(pi.preamble, l);
 		printf(": %*.*f%% ",
 			// (pad preamble)    00            .   000*
-			(pi.prlen - prlen) + pi.floatlen + 1 + settings.precision,
+			(pi.prLen - prlen) + pi.floatLen + 1 + settings.precision,
 			settings.precision, 100 * p);
 
 		va_end(l);
@@ -124,30 +115,36 @@ static bool plot_preamble(struct plotinfo pi, double p, ...)
 	}
 }
 
-/* Prints a row of the plot.
-	pi is obtained from plot_init().
-	p is the current probability.
-	the following are arguments for the preamble format. */
-static void plot_bar(struct plotinfo pi, double p)
+/** Prints a bar of a plot.
+	@param pi obtained from plot_init().
+	@param p the current probability.
+*/
+static void plot_bar(struct plotInfo pi, double p)
 {
-	int barlen = (int)round(p * pi.scaling);
+	int barLen = (int)round(p * pi.scaling);
 
-	for (int i = 0; i < barlen; i++)
+	for (int i = 0; i < barLen; i++)
 		putchar('#');
 
 	putchar('\n');
 }
 
-static void plot_barC(struct plotinfo pi, double p, double e)
+/** Prints a bar of a plot in compare mode.
+	Uses '+' and '-' in place of '#' to indicate differences.
+	@param pi obtained from plot_init()
+	@param p the current probability
+	@param e the expected probability from the distribution being compared
+ */
+static void plot_barC(struct plotInfo pi, double p, double e)
 {
-	int barlen = (int)round(p * pi.scaling);
-	int explen = (int)round(e * pi.scaling);
+	int barLen = (int)round(p * pi.scaling);
+	int expLen = (int)round(e * pi.scaling);
 
-	for (int i = 0; i < barlen || i < explen; i++)
+	for (int i = 0; i < barLen || i < expLen; i++)
 	{
-		if(i >= barlen)
+		if(i >= barLen)
 			putchar('-');
-		else if(i >= explen)
+		else if(i >= expLen)
 			putchar('+');
 		else
 			putchar('#');
@@ -156,6 +153,10 @@ static void plot_barC(struct plotinfo pi, double p, double e)
 	putchar('\n');
 }
 
+/** Plots the difference between two probability functions
+	@param p the current probability function
+	@param e the expected probability function
+ */
 void plot_diff(struct prob p, struct prob e)
 {
 	double sumErr = 0, sumSqErr = 0, sumRelErr = 0, sumSqRelErr = 0;
@@ -190,9 +191,13 @@ void plot_diff(struct prob p, struct prob e)
 		settings.precision, 			100 * sumSqRelErr, 					100 * sumSqRelErr / samples,		100 * sqrt(sumSqRelErr/samples));
 }
 
-/* trims p according to program arguments.
-	The returned function references the same array as the input. */
-static struct prob p_trim(struct prob p, struct plotinfo pi)
+/** Trims p according to program arguments. In place.
+	@param p A probability function
+	@param pi obtained from plot_init()
+	@returns p without trimmed values, as per program settings.
+		References the same array as the input.
+*/
+static struct prob p_trims(struct prob p, struct plotInfo pi)
 {
 	// left and right offsets
 	int start, end;
@@ -211,7 +216,9 @@ static struct prob p_trim(struct prob p, struct plotinfo pi)
 
 #pragma endregion
 
-/* Plots p onto stdout. */
+/** Plots p onto stdout.
+	@param p A probability function
+*/
 void p_plot(struct prob p)
 {
 	int mw = max(numw(p.low), numw(p_h(p)));
@@ -234,12 +241,12 @@ void p_plot(struct prob p)
 		}
 	}
 
-	struct plotinfo pi = plot_init("%*d", mw, pmax);
-	p = p_trim(p, pi);
+	struct plotInfo pi = plot_init("%*d", mw, pmax);
+	p = p_trims(p, pi);
 
 	if(settings.mode == PREDICT_COMP && settings.compare)
 	{
-		p_t c = p_trim(*settings.compare, pi);
+		struct prob c = p_trims(*settings.compare, pi);
 		int hi = max(p_h(p), p_h(c));
 
 		for (int n = min(p.low, c.low); n <= hi; n++)
@@ -257,6 +264,11 @@ void p_plot(struct prob p)
 	}
 }
 
+/** Prints a header describing a probability function
+	@param p A probability function
+	@param mu If not NULL, overwritten with the expected value of p
+	@param sigma If not NULL, overwritten with the standard deviation of p
+ */
 void p_header(struct prob p, double *mu, double *sigma)
 {
 	double avg = 0.0;
@@ -295,11 +307,14 @@ void p_header(struct prob p, double *mu, double *sigma)
 		*sigma = sqrt(var);
 }
 
+/** Prints a boolean (i.e. 0/1) probability function.
+	@param p A probability function
+*/
 void p_printB(struct prob p)
 {
 	const char *strs[] = { "false", "true" };
 	bool isConst = p.len == 1;
-	struct plotinfo pi = plot_init("%s", 5, isConst ? 1.0 : p.p[p.p[0] < p.p[1]]);
+	struct plotInfo pi = plot_init("%s", 5, isConst ? 1.0 : p.p[p.p[0] < p.p[1]]);
 
 	for (int i = 0; i <= 1; i++)
 	{
@@ -309,17 +324,20 @@ void p_printB(struct prob p)
 	}
 }
 
-/* Plots p's compare mode */
-void p_comp(struct prob p)
+/** Plots p's compare mode against settings.compareValue
+	@param p a probability function
+	@param to The value to compare against
+*/
+void p_comp(struct prob p, int to)
 {
 	double cpr[5] = {};
 	const char *op[] = { "<= ", " < ", " = ", " > ", ">= " };
 
 	for (int i = 0; i < p.len; i++)
 	{
-		if(p.low + i > settings.compareValue)
+		if(p.low + i > to)
 			cpr[3] += p.p[i];
-		else if(p.low + i < settings.compareValue)
+		else if(p.low + i < to)
 			cpr[1] += p.p[i];
 		else
 			cpr[2] += p.p[i];
@@ -329,16 +347,18 @@ void p_comp(struct prob p)
 	cpr[4] = cpr[3] + cpr[2];
 	double pmax = (cpr[0] > cpr[4]) ? cpr[0] : cpr[4];
 
-	struct plotinfo pi = plot_init("%s%d", 3 + numw(settings.compareValue), pmax);
+	struct plotInfo pi = plot_init("%s%d", 3 + numw(to), pmax);
 
 	for (int i = 0; i < 5; i++)
 	{
-		if(plot_preamble(pi, cpr[i], op[i], settings.compareValue))
+		if(plot_preamble(pi, cpr[i], op[i], to))
 			plot_bar(pi, cpr[i]);
 	}
 }
 
-/* Prints debug info on p */
+/** Prints debug info on p
+	@param p a probability function
+*/
 void p_debug(struct prob p)
 {
 	double sum = 0;

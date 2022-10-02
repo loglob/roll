@@ -13,7 +13,7 @@
 	(1) ∑p = 1
 	(2) p[0] > 0
 	(3) p[len - 1] > 0 */
-typedef struct prob
+struct prob
 {
 	// the lowest
 	signed int low;
@@ -21,13 +21,17 @@ typedef struct prob
 	int len;
 	// the probability values
 	double *p;
-} p_t;
+};
 
 /* The highest value of p */
 #define p_h(p) ((p).low + (p).len - 1)
 
-/* Stores the 'next' combination of n numbers between 0 and max (exclusive) in ind.
-	returns false if the all-0-combination was returned, true otherwise. */
+/** Stores the 'next' combination of n numbers between 0 and max (exclusive) in ind.
+	@param max The amount of numbers to choose from
+	@param n The amount of choices to make, i.e. the number of entries in ind
+	@param ind A buffer ∈ [0;max]ⁿ containing the last permutation, which is overwritten with the next one
+	@returns false if the all-0-combination was returned, true otherwise.
+*/
 static bool combinations(int max, int n, int ind[n])
 {
 	int i;
@@ -41,32 +45,39 @@ static bool combinations(int max, int n, int ind[n])
 	return i || *ind;
 }
 
-/* Calculates the amount of distinct permutations of the given sorted list. */
+/** Calculates the total number of permutations of a list
+	@param n The length of ind
+	@param ind A sorted list of possible choices
+	@return The amount of distinct permutations there are of ind
+*/
 static double permutations(int n, int ind[n])
 {
 	double nFact = 1;
 	double div = 1;
-	int runlen = 0;
+	int runLen = 0;
 
 	for (int i = 1; i < n; i++)
 	{
 		nFact *= i + 1;
 
 		if(ind[i] == ind[i - 1])
-			div *= ++runlen;
+			div *= ++runLen;
 		else
 		{
-			div *= runlen + 1;
-			runlen = 0;
+			div *= runLen + 1;
+			runLen = 0;
 		}
 	}
 
-	div *= runlen + 1;
+	div *= runLen + 1;
 
 	return nFact / div;
 }
 
-/* creates a buffer that maps i onto (N choose (i+1)) */
+/** Computes all binomial coefficients for a given number
+	@param N The n parameter for the binomial coefficients
+	@returns Array a of length N-1, s.t. a[i] = (N choose (i+1)), or NULL if N <= 1
+*/
 int *chooseBuf(int N)
 {
 	if(N < 2)
@@ -103,7 +114,11 @@ int *chooseBuf(int N)
 	return buf;
 }
 
-/* The probability of num in p */
+/** The probability of a result in p
+	@param p A probability function
+	@param num A result
+	@returns P(x from p = num), i.e. p(num)
+*/
 double probof(struct prob p, signed int num)
 {
 	if(num >= p.low && num < p.low + p.len)
@@ -412,7 +427,7 @@ struct prob p_merge(struct prob l, struct prob r, double q)
 /* adds l onto r*q. In-place. */
 struct prob p_merges(struct prob l, struct prob r, double q)
 {
-	p_t res = p_merge(l, r, q);
+	struct prob res = p_merge(l, r, q);
 	p_free(l);
 
 	if(l.p != r.p)
@@ -461,11 +476,11 @@ struct prob p_selectOne(struct prob p, int of, bool selHigh)
 	for (int i = 0; i < p.len; i++)
 	{
 		// probability of a value being smaller / larger than i.
-		double plti = selHigh ? (i ? sum[i - 1] : 0.0) : (1.0 - sum[i]);
+		double pLtI = selHigh ? (i ? sum[i - 1] : 0.0) : (1.0 - sum[i]);
 		double px = pow(p.p[i], of);
 
 		for (int j = 1; j < of; j++)
-			px += pow(p.p[i], j) * pow(plti, of - j) * c[j-1];
+			px += pow(p.p[i], j) * pow(pLtI, of - j) * c[j-1];
 
 		p.p[i] = px;
 	}
@@ -703,21 +718,21 @@ struct prob p_explode_ns(const struct prob p, int n)
 	assert(n > 0);
 
 	int max = p.len + p.low - 1;
-	double pmax = p.p[p.len - 1];
+	double pMax = p.p[p.len - 1];
 
 	// Axiom (1) gets restored over the loop
-	p_t res = p_dup((struct prob){ .len = p.len - 1, .low = p.low, .p = p.p });
-	double pcur = pmax;
+	struct prob res = p_dup((struct prob){ .len = p.len - 1, .low = p.low, .p = p.p });
+	double pCur = pMax;
 
-	for (int i = 1; i < n; i++, pcur *= pmax)
+	for (int i = 1; i < n; i++, pCur *= pMax)
 	{
-		p_t cur = p_merge(res, (struct prob){ .len = p.len - 1, .low = p.low + max * i, .p = p.p }, pcur);
+		struct prob cur = p_merge(res, (struct prob){ .len = p.len - 1, .low = p.low + max * i, .p = p.p }, pCur);
 		p_free(res);
 		res = cur;
 	}
 
 	// final round without cutting off the maximum. Effectively cut off the converging infinite series, restoring Axiom (1)
-	return p_merges(res, (struct prob){ .len = p.len, .low = p.low + max * n, .p = p.p }, pcur);
+	return p_merges(res, (struct prob){ .len = p.len, .low = p.low + max * n, .p = p.p }, pCur);
 }
 
 /* Emulates rolling on l and r, then selecting the higher value. In-place. */

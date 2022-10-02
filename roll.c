@@ -263,7 +263,7 @@ int main(int argc, char **argv)
 			case PREDICT_COMP:
 			case PREDICT_COMP_NORMAL:
 			{
-				p_t p = translate(d);
+				struct prob p = translate(d);
 
 				d_print(d);
 				printf(":\n");
@@ -280,11 +280,11 @@ int main(int argc, char **argv)
 
 					if(settings.mode == PREDICT_COMP_NORMAL)
 					{
-						settings.compare = xmalloc(sizeof(p_t));
+						settings.compare = xmalloc(sizeof(struct prob));
 						*settings.compare = (struct prob){ .len = p.len + 2, .low = p.low - 1,
 							.p = xmalloc(sizeof(double) * (p.len + 2)) };
 
-						// do this so absolute error is correct & squared error won't be underreported
+						// do this so absolute error is correct & squared error won't be under-reported
 						// there is no closed form for the squared error (and the mean doesn't make much sense)
 						// so this is the best solution for now
 						settings.compare->p[0] = phi(p.low - 0.5, mu, sigma);
@@ -301,7 +301,7 @@ int main(int argc, char **argv)
 
 				if(settings.mode == PREDICT_COMP && !settings.compare)
 				{
-					settings.compare = xmalloc(sizeof(p_t));
+					settings.compare = xmalloc(sizeof(struct prob));
 					settings.compare[0] = p;
 				}
 				else
@@ -318,11 +318,11 @@ int main(int argc, char **argv)
 
 			case COMPARE:
 			{
-				p_t p = translate(d);
+				struct prob p = translate(d);
 
 				d_print(d);
 				printf(" <=> %d:\n", settings.compareValue);
-				p_comp(p);
+				p_comp(p, settings.compareValue);
 
 				p_free(p);
 			}

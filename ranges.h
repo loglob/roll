@@ -8,24 +8,24 @@
 	Values set to 0 if not within the range. */
 typedef struct rlim {
 	// the highest and lowest positive values
-	signed int hpos, lpos;
+	signed int hPos, lPos;
 	// the lowest and highest negative values
-	signed int lneg, hneg;
+	signed int lNeg, hNeg;
 	// the overall lowest and highest values
 	signed int low, high;
 	// the total length
 	int len;
 	// whether the range contains zero.
-	bool haszero;
+	bool hasZero;
 } rl_t;
 
 // sets .low, .high and .len for a range with every other field set.
 static rl_t _range_fin(rl_t s)
 {
-	s.low = min0(s.lpos, s.lneg);
-	s.high = max(s.hpos, s.hneg);
+	s.low = min0(s.lPos, s.lNeg);
+	s.high = max(s.hPos, s.hNeg);
 
-	if(s.haszero)
+	if(s.hasZero)
 	{
 		s.low = min(s.low, 0);
 		s.high = max(s.high, 0);
@@ -36,46 +36,50 @@ static rl_t _range_fin(rl_t s)
 	return s;
 }
 
-/* Determines the limits of the given range. */
+/** Determines the limits of the given range.
+	@param low The overall lowest value
+	@param low The overall highest value
+	@return An equivalent range structure, with .low=low and .high=high
+*/
 rl_t range_lim(signed int low, signed int high)
 {
 	if(low == 0) // Range starting at 0 that may be empty
-		return (rl_t){ .lpos = (low != high), .hpos = high, .low = low, .high = high, .haszero = true, .len = high - low + 1 };
+		return (rl_t){ .lPos = (low != high), .hPos = high, .low = low, .high = high, .hasZero = true, .len = high - low + 1 };
 	else if(high == 0) // Range ending in 0
-		return (rl_t){ .lneg = low, .hneg = -1, .low = low, .high = high, .haszero = true, .len = high - low + 1 };
+		return (rl_t){ .lNeg = low, .hNeg = -1, .low = low, .high = high, .hasZero = true, .len = high - low + 1 };
 	else if(low > 0) // all values are positive
-		return (rl_t){ .lpos = low, .hpos = high, .low = low, .high = high, .len = high - low + 1 };
+		return (rl_t){ .lPos = low, .hPos = high, .low = low, .high = high, .len = high - low + 1 };
 	else if(high < 0) // all values are negative
-		return (rl_t){ .lneg = low, .hneg = high, .low = low, .high = high, .len = high - low + 1 };
+		return (rl_t){ .lNeg = low, .hNeg = high, .low = low, .high = high, .len = high - low + 1 };
 	else // range crosses 0
-		return (rl_t){ .lneg = low, .hneg = -1, .lpos = 1, .hpos = high, .low = low, .high = high, .haszero = true, .len = high - low + 1 };
+		return (rl_t){ .lNeg = low, .hNeg = -1, .lPos = 1, .hPos = high, .low = low, .high = high, .hasZero = true, .len = high - low + 1 };
 }
 
-/* Determines the range of results of (llow..lhigh)/(rlow..rhigh) */
+/* Determines the range of results of (l.low..l.high)/(r.low..r.high) */
 rl_t range_div(rl_t l, rl_t r)
 {
 	#define DIV(a,b) b ? (a/b) : 0
 
 	return _range_fin((rl_t){
-		.lneg = min0(DIV(l.hpos, r.hneg), DIV(l.lneg, r.lpos)),
-		.hneg = max(DIV(l.lpos, r.lneg), DIV(l.hneg, r.hpos)),
-		.lpos = min0(DIV(l.lpos, r.hpos), DIV(l.hneg, r.lneg)),
-		.hpos = max(DIV(l.hpos, r.lpos), DIV(l.lneg, r.hneg)),
-		.haszero = l.haszero
+		.lNeg = min0(DIV(l.hPos, r.hNeg), DIV(l.lNeg, r.lPos)),
+		.hNeg = max(DIV(l.lPos, r.lNeg), DIV(l.hNeg, r.hPos)),
+		.lPos = min0(DIV(l.lPos, r.hPos), DIV(l.hNeg, r.lNeg)),
+		.hPos = max(DIV(l.hPos, r.lPos), DIV(l.lNeg, r.hNeg)),
+		.hasZero = l.hasZero
 	});
 
 	#undef DIV
 }
 
-/* Determines the range of results of (llow..lhigh)*(rlow..rhigh) */
+/* Determines the range of results of (l.low..l.high)*(r.low..r.high) */
 rl_t range_mul(rl_t l, rl_t r)
 {
 	return _range_fin((rl_t){
-		.lneg = min0(l.lneg * r.hpos, l.hpos * r.lneg),
-		.hneg = max(l.hneg * r.lpos, l.lpos * r.hneg),
-		.lpos = min0(l.hneg * r.hneg, l.lpos * r.lpos),
-		.hpos = min0(l.lneg * r.lneg, l.hpos * r.hpos),
-		.haszero = l.haszero || r.haszero
+		.lNeg = min0(l.lNeg * r.hPos, l.hPos * r.lNeg),
+		.hNeg = max(l.hNeg * r.lPos, l.lPos * r.hNeg),
+		.lPos = min0(l.hNeg * r.hNeg, l.lPos * r.lPos),
+		.hPos = min0(l.lNeg * r.lNeg, l.hPos * r.hPos),
+		.hasZero = l.hasZero || r.hasZero
 	});
 }
 

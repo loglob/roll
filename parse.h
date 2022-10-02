@@ -28,7 +28,7 @@ die := n
 	| die \ ! set
 	| die ^ INT / INT
 	| die ^ INT
-	| die ^ ! INT
+	| die ^! INT
 	| die _ INT / INT
 	| die _ INT
 	| die !
@@ -39,10 +39,13 @@ die := n
 	| die / die
 	| die + die
 	| die - die
-	| die ^ ^ die
-	| die _ _ die
+	| die ^^ die
+	| die __ die
 	| die > die
+	| die >= die
 	| die < die
+	| die >= die
+	| die = die
 	| die ? die
 	| die ? die : die
 	| ( die )
@@ -63,7 +66,7 @@ static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=" };
 static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ };
 
 /* represents the state of the lexer */
-typedef struct lexstate
+typedef struct lexState
 {
 	bool unlex;
 	const char *pos, *err;
@@ -97,8 +100,8 @@ const char *tkstr(char tk)
 	}
 }
 
-/* Like _unexptk, but accepts strings instead of chars. An empty string encoded the NUL token. */
-static void _unexptks(ls_t ls, const char *first, ...)
+/* Like _badtk, but accepts strings instead of chars. An empty string encodes the NUL token. */
+static void _badtks(ls_t ls, const char *first, ...)
 {
 	va_list vl;
 	va_start(vl, first);
@@ -133,7 +136,7 @@ static void _unexptks(ls_t ls, const char *first, ...)
 }
 
 /* Prints an error message, describing that a token isn't in the given list of expected tokens. */
-static void _unexptk(ls_t ls, int first, ...)
+static void _badtk(ls_t ls, int first, ...)
 {
 	va_list vl;
 	va_start(vl, first);
@@ -153,26 +156,23 @@ static void _unexptk(ls_t ls, int first, ...)
 	*b = 0;
 
 	if(nul && b != buf)
-		_unexptks(ls, buf, "", NULL);
+		_badtks(ls, buf, "", NULL);
 	else
-		_unexptks(ls, buf, NULL);
+		_badtks(ls, buf, NULL);
 }
 
 
 #define _LS *ls
-#define lerrf(ls, fmt, ...) eprintf("Error at %.5s: " fmt "\n", (ls).err, __VA_ARGS__)
-#define lerr(ls, msg) lerrf(ls, "%s", msg)
-#define errf(fmt, ...) lerrf(_LS, fmt, __VA_ARGS__)
-#define err(msg) lerr(_LS, msg)
-#define lbadtk(ls, ...) _unexptk(ls, __VA_ARGS__, -1)
-#define badtk(...) _unexptk(_LS, __VA_ARGS__, -1)
-#define badtks(...) _unexptks(_LS, __VA_ARGS__, NULL)
+#define lerrf(ls, fmt, ...) eprintf("Error at %.5s: " fmt "\n", (ls).err, ##__VA_ARGS__)
+#define errf(fmt, ...) lerrf(_LS, fmt, ##__VA_ARGS__)
+#define badtk(...) _badtk(_LS, __VA_ARGS__, -1)
+#define badtks(...) _badtks(_LS, __VA_ARGS__, NULL)
 
 #pragma endregion
 
 #pragma region lexer functions
 
-static char _lex(struct lexstate *ls)
+static char _lex(struct lexState *ls)
 {
 	char i;
 
@@ -196,7 +196,7 @@ static char _lex(struct lexstate *ls)
 
 		// only ERANGE is possible
 		if(errno)
-			lerr(*ls, "Integer value too large.\n");
+			errf("Integer value too large.\n");
 
 		return ls->last = (ls->num) ? INT : ZERO;
 	}
@@ -221,21 +221,19 @@ static char _lex(struct lexstate *ls)
 		return ls->last = i;
 	}
 
-	lerrf(*ls, "Unknown token: '%c'", i);
+	errf("Unknown token: '%c'", i);
 	__builtin_unreachable();
 }
 
-static int _lexc(struct lexstate *ls, char c)
+static int _lexi(struct lexState *ls)
 {
-	char got = _lex(ls);
-
-	if(got != c)
-		lbadtk(*ls, c);
+	if(_lex(ls) != INT)
+		badtk(INT);
 
 	return ls->num;
 }
 
-static void _unlex(struct lexstate *ls)
+static void _unlex(struct lexState *ls)
 {
 	if(ls->unlex)
 		eprintf("Parsing failed: Double unlex\n");
@@ -243,7 +241,7 @@ static void _unlex(struct lexstate *ls)
 	ls->unlex = true;
 }
 
-static bool _lexm(struct lexstate *ls, char c)
+static bool _lexm(struct lexState *ls, char c)
 {
 	if(_lex(ls) == c)
 		return true;
@@ -256,12 +254,9 @@ static bool _lexm(struct lexstate *ls, char c)
 
 /* Retrieves the next token. Returns the read token kind. */
 #define lex() _lex(ls)
-/* Reads the next token.
-	Then checks if its kind is c, prints an error message and exits if it isn't.
-	Returns the read integer value. */
-#define lexc(c) _lexc(ls, c)
-/* Reads a signed integer, i.e. an INT token optionally preceded by '-' to indicate a negative number. */
-#define lexd() _lexd(ls)
+/* Reads the next token abd asserts that it's a positive whole number.
+	Returns the number read. */
+#define lexi() _lexi(ls)
 /* Causes the next lex() call to return the same token as the last.
 	Only valid if lex() was called since the last call to unlex() */
 #define unlex() _unlex(ls)
@@ -273,8 +268,10 @@ static bool _lexm(struct lexstate *ls, char c)
 #pragma endregion
 
 #pragma region static functions
-/* The operator precedence of the given operator.
-	a lower precedence denotes operators that would be evaluated sooner. */
+/** The operator precedence of the given operator.
+	a lower precedence denotes operators that would be evaluated sooner.
+	An even precedence indicates left- and odd indicates right association.
+	*/
 static int precedence(char op)
 {
 	switch(op)
@@ -305,15 +302,7 @@ static int precedence(char op)
 	}
 }
 
-/* Allocates a copy of the struct. */
-static struct die *d_clone(struct die opt)
-{
-	struct die *val = xmalloc(sizeof(opt));
-	*val = opt;
-	return val;
-}
-
-/* Merges two expressions with a binary operator. Handles operator precedence. */
+/** Merges two expressions with a binary operator. Handles operator precedence. */
 static struct die *d_merge(struct die *left, char op, struct die *right)
 {
 	int pl = precedence(left->op);
@@ -331,6 +320,8 @@ static struct die *d_merge(struct die *left, char op, struct die *right)
 
 static struct die *_parse_expr(ls_t *ls);
 
+/** Parses an atom expression, so a number, a unary minus or a parenthesized expression.
+	Also expands INT d into INT x d (see line 2) */
 static inline struct die *_parse_atom(ls_t *ls)
 {
 	switch (lex())
@@ -382,7 +373,7 @@ static inline struct die *_parse_atom(ls_t *ls)
 	}
 }
 
-/** Parses a range limit */
+/** Parses a range limit in a set filter */
 static inline int _parse_lim(rl_t rng, ls_t *ls)
 {
 	int sgn = lexm('-') ? -1 : 1;
@@ -407,7 +398,7 @@ static inline int _parse_lim(rl_t rng, ls_t *ls)
 	}
 }
 
-/* Iteratively parses every postfix unary operator.
+/** Iteratively parses every postfix unary operator.
 	left is optional and represents the expression the postfix is applied to.
 	Mutually recurses with _parse_expr() to parse parenthesized expressions. */
 static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
@@ -424,11 +415,11 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 			case '^':
 			case '_':
 			{
-				int sel = lexc(INT);
+				int sel = lexi();
 				int of;
 
 				if(lexm('/'))
-					of = lexc(INT);
+					of = lexi();
 				else
 				{
 					of = sel;
@@ -469,7 +460,7 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 						int end = _parse_lim(rng, ls);
 
 						if(start > end)
-							err("Invalid range specifier, ranges must be ordered");
+							errf("Invalid range specifier, ranges must be ordered");
 
 						set_insert(&set, start, end);
 					}
@@ -489,7 +480,7 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 	}
 }
 
-/* Iteratively parses every infix binary operator.
+/** Iteratively parses every infix binary operator.
 	Mutually recurses with _parse_pexpr() to parse parenthesized expressions. */
 static struct die *_parse_expr(ls_t *ls)
 {
@@ -502,7 +493,7 @@ static struct die *_parse_expr(ls_t *ls)
 
 		if(op == NUL)
 			return left;
-		else if(strchr(BIOPS, op) || op == '?')
+		else if(strchr(BIOPS, op))
 			left = d_merge(left, op, _parse_pexpr(NULL, ls));
 		else if(op == ':' && left->op == '?')
 		{
@@ -528,43 +519,20 @@ static struct die *_parse_expr(ls_t *ls)
 
 #pragma endregion
 
-/* Parses a die expression */
+/** Parses a die expression. Exits on parse failure. */
 struct die *parse(const char *str)
 {
 	ls_t ls = (ls_t){ .pos = str };
 	struct die *d = _parse_expr(&ls);
 
 	if(ls.pdepth)
-		lbadtk(ls,')');
+		_badtk(ls, ')', -1);
 
 	return d;
 }
 
-/* frees all resources used by a die expression. */
-void d_free(struct die *d)
-{
-	if(strchr(BIOPS, d->op))
-	{
-		d_free(d->biop.l);
-		d_free(d->biop.r);
-	}
-	else if(strchr(SELECT, d->op))
-		d_free(d->select.v);
-	else if(strchr(REROLLS, d->op))
-	{
-		d_free(d->reroll.v);
-		set_free(d->reroll.set);
-	}
-	else if(strchr(UOPS, d->op))
-		d_free(d->unop);
-
-	free(d);
-}
-
 #undef _LS
 #undef lerrf
-#undef lerr
 #undef errf
-#undef err
-#undef lbadtk
 #undef badtk
+#undef badtks
