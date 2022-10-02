@@ -16,7 +16,10 @@ rl_t d_range(d_t *d)
 			return range_lim(d->constant, d->constant);
 
 		case 'd':
-			return d_range(d->unop);
+		{
+			rl_t u = d_range(d->unop);
+			return range_lim(min(1, u.low), max(-1, u.high));
+		}
 
 		case 'x':
 		case '*':

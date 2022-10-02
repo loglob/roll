@@ -5,8 +5,15 @@
 INT := [1-9][0-9]* ;
 n := INT | 0+ | - INT ;
 
-range := n
-	| n - n
+lim := n
+	| ^
+	| - ^
+	| _
+	| - _
+;
+
+range := lim
+	| lim - lim
 ;
 
 set := range
@@ -49,6 +56,7 @@ die := n
 #include <string.h>
 #include <ctype.h>
 #include "util.h"
+#include "ranges.h"
 #include "set.h"
 
 #define NUL ((char)0)
@@ -72,7 +80,7 @@ die := n
 #define MULTITOKS_STR "^^", "__", "^!", "<=", ">="
 #define MULTITOKS_CHR UPUP, __, UP_BANG, LT_EQ, GT_EQ
 
-static const char mtok_str[][2] = { MULTITOKS_STR };
+static const char mtok_str[][3] = { MULTITOKS_STR };
 static const char mtok_chr[] = { MULTITOKS_CHR };
 
 /* represents the state of the lexer */
@@ -114,6 +122,10 @@ typedef struct dieexpr
 		int constant;
 	};
 } d_t;
+
+extern rl_t d_range(d_t *d);
+
+extern void d_printTree(d_t *d, int depth);
 
 #pragma region Error Handling
 
@@ -280,25 +292,6 @@ static int _lexc(struct lexstate *ls, char c)
 	return ls->num;
 }
 
-static signed int _lexd(struct lexstate *ls)
-{
-	switch(_lex(ls))
-	{
-		case '-':
-			return -_lexc(ls, INT);
-
-		case INT:
-			return ls->num;
-
-		case ZERO:
-			return 0;
-
-		default:
-			lbadtk(*ls, '-', INT);
-			__builtin_unreachable();
-	}
-}
-
 static void _unlex(struct lexstate *ls)
 {
 	if(ls->unlex)
@@ -446,6 +439,31 @@ static inline struct dieexpr *_parse_atom(ls_t *ls)
 	}
 }
 
+/** Parses a range limit */
+static inline int _parse_lim(rl_t rng, ls_t *ls)
+{
+	int sgn = lexm('-') ? -1 : 1;
+
+	switch(lex())
+	{
+		case '^':
+			return sgn * rng.high;
+
+		case '_':
+			return sgn * rng.low;
+
+		case INT:
+			return sgn * ls->num;
+
+		case ZERO:
+			return 0;
+
+		default:
+			badtk('^', '_', '-', INT, ZERO);
+			__builtin_unreachable();
+	}
+}
+
 /* Iteratively parses every postfix unary operator.
 	left is optional and represents the expression the postfix is applied to.
 	Mutually recurses with _parse_expr() to parse parenthesized expressions. */
@@ -497,14 +515,16 @@ static inline struct dieexpr *_parse_pexpr(struct dieexpr *left, ls_t *ls)
 			{
 				struct set set = {};
 				bool neg = lexm('!');
+				rl_t rng = d_range(left);
+				d_printTree(left, 0);
 
 				do
 				{
-					int start = lexd();
+					int start = _parse_lim(rng, ls);
 
 					if(lexm('-'))
 					{
-						int end = lexd();
+						int end = _parse_lim(rng, ls);
 
 						if(start > end)
 							err("Invalid range specifier, ranges must be ordered");
@@ -581,13 +601,9 @@ struct dieexpr *parse(const char *str)
 /* frees all resources used by a die expression. */
 void d_free(struct dieexpr *d)
 {
-    fprintf(stderr, "[TRACE] d_free(%p): %s\n", d, tkstr(d->op));
-
 	if(strchr(BIOPS, d->op))
 	{
-        fprintf(stderr, "   BIOP LEFT\n");
 		d_free(d->biop.l);
-        fprintf(stderr, "   BIOP RIGHT\n");
 		d_free(d->biop.r);
 	}
 	else if(strchr(SELECT, d->op))
