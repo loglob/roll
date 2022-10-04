@@ -1,7 +1,7 @@
 // die.h: Defines the die struct and type.
 #pragma once
-#include "set.h"
-#include "util.h"
+#include <string.h>
+#include "types.h"
 
 #define NUL ((char)0)
 #define INT ((char)-2)
@@ -21,66 +21,42 @@
 #define SELECT "^_\xFA"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!$d("
-#define SPECIAL BIOPS UOPS ",/():"
+#define SPECIAL BIOPS UOPS ",/():;[]"
 
 extern const char *tkstr(char tok);
 
-/* represents a die expression as a syntax tree */
-struct die
-{
-	char op;
-	union
-	{
-		// valid if op == ':'
-		struct { struct die *cond, *then, *otherwise; } ternary;
-		// valid if op in BIOPS
-		struct { struct die *l, *r; } biop;
-		// valid if op in SELECT
-		struct { struct die *v; int sel, of; } select;
-		/** valid if op in REROLLS*/
-		struct
-		{
-			/** The die to roll on */
-			struct die *v;
-			/** The results to reroll */
-			struct set set;
-		} reroll;
-		// valid if op is '$'
-		struct { struct die *v; int rounds; } explode;
-		// valid if op in UOPS
-		struct die *unop;
-		// valid if op == INT
-		int constant;
-	};
-};
-
-/** Allocates a copy of the struct. */
-struct die *d_clone(struct die opt)
-{
-	struct die *val = xmalloc(sizeof(opt));
-	*val = opt;
-	return val;
-}
-
 /** Frees all resources used by a die expression. */
-void d_free(struct die *d)
+void d_free(struct die d)
 {
-	if(strchr(BIOPS, d->op))
+	if(strchr(BIOPS, d.op))
 	{
-		d_free(d->biop.l);
-		d_free(d->biop.r);
+		d_freeP(d.biop.l);
+		d_freeP(d.biop.r);
 	}
-	else if(strchr(SELECT, d->op))
-		d_free(d->select.v);
-	else if(strchr(REROLLS, d->op))
+	else if(strchr(SELECT, d.op))
+		d_freeP(d.select.v);
+	else if(strchr(REROLLS, d.op))
 	{
-		d_free(d->reroll.v);
-		set_free(d->reroll.set);
+		d_freeP(d.reroll.v);
+		set_free(d.reroll.set);
 	}
-	else if(strchr(UOPS, d->op))
-		d_free(d->unop);
+	else if(strchr(UOPS, d.op))
+		d_freeP(d.unop);
+	else if(d.op == '[')
+	{
+		d_freeP(d.match.v);
 
-	free(d);
+		for (int i = 0; i < d.match.cases; i++)
+		{
+			pt_free(d.match.patterns[i]);
+
+			if(d.match.actions)
+				d_free(d.match.actions[i]);
+		}
+
+		free(d.match.patterns);
+		free(d.match.actions);
+	}
 }
 
 /** Determines if d is a boolean expression */
@@ -171,7 +147,7 @@ void d_print(struct die *d)
 		case '\\':
 			d_print(d->select.v);
 			printf(" %c", d->op);
-			set_print(d->reroll.set, stdout);
+			set_print(d->reroll.set);
 		break;
 
 		case ':':
@@ -190,9 +166,36 @@ void d_print(struct die *d)
 			putchar(')');
 		break;
 
+		case '[':
+			d_print(d->match.v);
+			printf("[ ");
+
+			for (int i = 0; i < d->match.cases; i++)
+			{
+				if(i)
+					printf("; ");
+
+				pt_print(d->match.patterns[i]);
+
+				if(d->match.actions)
+				{
+					printf(": ");
+					d_print(d->match.actions + i);
+				}
+			}
+
+			printf(" ]");
+		break;
+
 		default:
 			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}
+}
+
+static void printIndent(int depth)
+{
+	for (int i = 0; i < depth; i++)
+		printf("|   ");
 }
 
 /** Prints the syntax tree of the given die expression
@@ -201,8 +204,7 @@ void d_print(struct die *d)
 */
 void d_printTree(struct die *d, int depth)
 {
-	for (int i = 0; i < depth; i++)
-		printf("|   ");
+	printIndent(depth);
 
 	switch(d->op)
 	{
@@ -225,6 +227,27 @@ void d_printTree(struct die *d, int depth)
 		case '(':
 			printf("PARENTHESIZED\n");
 			d_printTree(d->unop, depth + 1);
+		break;
+
+		case '[':
+			printf("PATTERN %s\n", d->match.actions ? "MATCH" : "TEST");
+			d_printTree(d->match.v, depth + 1);
+			printIndent(depth);
+			printf("AGAINST\n");
+			for (int i = 0; i < d->match.cases; i++)
+			{
+				printIndent(depth);
+				printf("  CASE ");
+				pt_print(d->match.patterns[i]);
+
+				if(d->match.actions)
+				{
+					printf(": \n");
+					d_printTree(d->match.actions + i, depth + 1);
+				}
+				else
+					putchar('\n');
+			}
 		break;
 
 		case '!':
@@ -283,7 +306,7 @@ void d_printTree(struct die *d, int depth)
 		case '~':
 			printf("REROLL ANY OF ");
 		print_rerolls:
-			set_print(d->reroll.set, stdout);
+			set_print(d->reroll.set);
 			putchar('\n');
 			d_printTree(d->select.v, depth + 1);
 		break;

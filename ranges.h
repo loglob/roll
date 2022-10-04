@@ -1,6 +1,7 @@
 // ranges.h: Implements operations on ranges
 #pragma once
 #include "util.h"
+#include "set.h"
 #include "die.h"
 #include "settings.h"
 
@@ -211,6 +212,32 @@ rl_t d_range(struct die *d)
 		{
 			rl_t l = d_range(d->biop.l), r = d_range(d->biop.l);
 			return range_lim(min(l.low, r.low), min(l.high, r.high));
+		}
+
+		case '<':
+		case '>':
+		case LT_EQ:
+		case GT_EQ:
+		case '=':
+		// (over)simplify all boolean expressions down to this, can't be bothered to do intersection checks
+			return range_lim(0,1);
+
+		case '[':
+		{
+			if(! d->match.actions)
+				return range_lim(0,1);
+
+			assert(d->match.cases);
+
+			rl_t cur = d_range(d->match.actions);
+
+			for (int i = 1; i < d->match.cases; i++)
+			{
+				rl_t x = d_range(d->match.actions + i);
+				cur = range_lim(min(x.low, cur.low), max(x.high, cur.high));
+			}
+
+			return cur;
 		}
 
 		default:

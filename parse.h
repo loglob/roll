@@ -58,12 +58,16 @@ die := n
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
 #include "util.h"
 #include "ranges.h"
 #include "die.h"
+#include "pattern.h"
 
 static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=" };
 static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ };
+
+#define MAX_PAREN_DEPTH (sizeof(unsigned long long) * CHAR_BIT)
 
 /* represents the state of the lexer */
 typedef struct lexState
@@ -71,7 +75,12 @@ typedef struct lexState
 	bool unlex;
 	const char *pos, *err;
 	char last;
-	int num, pdepth;
+	int num;
+	/** How many parenthesis levels were opened until now */
+	unsigned char parenDepth;
+	/** Stores the kind of parentheses opened. 1 indicates a bracket, 0 a parenthesis.
+		LOWEST bit indicates current paren */
+	unsigned long long parenStack;
 } ls_t;
 
 #pragma region Error Handling
@@ -225,10 +234,10 @@ static char _lex(struct lexState *ls)
 	__builtin_unreachable();
 }
 
-static int _lexi(struct lexState *ls)
+static int _lexc(struct lexState *ls, char c)
 {
-	if(_lex(ls) != INT)
-		badtk(INT);
+	if(_lex(ls) != c)
+		badtk(c);
 
 	return ls->num;
 }
@@ -252,11 +261,32 @@ static bool _lexm(struct lexState *ls, char c)
 	}
 }
 
+static void _pushParen(struct lexState *ls, bool bracket)
+{
+	if(ls->parenDepth >= MAX_PAREN_DEPTH)
+		eprintf("Too many parenthesis layers, maximum is %zu\n", MAX_PAREN_DEPTH);
+
+	ls->parenDepth++;
+	ls->parenStack = bracket | (ls->parenStack >> 1);
+}
+
+static bool _popParen(struct lexState *ls, bool bracket)
+{
+	if(ls->parenDepth && (ls->parenStack & 1) == bracket)
+	{
+		ls->parenDepth--;
+		ls->parenStack >>= 1;
+		return true;
+	}
+	else
+		return false;
+}
+
 /* Retrieves the next token. Returns the read token kind. */
 #define lex() _lex(ls)
-/* Reads the next token abd asserts that it's a positive whole number.
+/* Reads the next token abd asserts that it's the given token.
 	Returns the number read. */
-#define lexi() _lexi(ls)
+#define lexc(tk) _lexc(ls, tk)
 /* Causes the next lex() call to return the same token as the last.
 	Only valid if lex() was called since the last call to unlex() */
 #define unlex() _unlex(ls)
@@ -264,6 +294,12 @@ static bool _lexm(struct lexState *ls, char c)
 	Then checks if its kind is c and unlex()es it if it isn't.
 	Returns whether the token matched. */
 #define lexm(tk) _lexm(ls,tk)
+/** Tries popping a paren from the parenthesis stack */
+#define popParen(br) _popParen(ls, br)
+/** Pushes a paren onto the parenthesis stack */
+#define pushParen(br) _pushParen(ls, br)
+#define peekParen() (ls->parenStack & 1)
+
 
 #pragma endregion
 
@@ -349,7 +385,7 @@ static inline struct die *_parse_atom(ls_t *ls)
 			return d_clone((struct die){ .op = 'd', .unop = _parse_atom(ls) });
 
 		case '(':
-			ls->pdepth++;
+			pushParen(false);
 			return _parse_expr(ls);
 
 		case '-':
@@ -398,6 +434,112 @@ static inline int _parse_lim(rl_t rng, ls_t *ls)
 	}
 }
 
+static struct set _parse_set(rl_t rng, ls_t *ls)
+{
+	struct set set = { .negated = lexm('!') };
+
+	do
+	{
+		int start = _parse_lim(rng, ls);
+
+		if(lexm('-'))
+		{
+			int end = _parse_lim(rng, ls);
+
+			if(start > end)
+				errf("Invalid range specifier, ranges must be ordered");
+
+			set_insert(&set, start, end);
+		}
+		else
+			set_insert(&set, start, start);
+
+	} while(lexm(','));
+
+	return set;
+}
+
+/** Parses a pattern specifier */
+static inline struct pattern _parse_pattern(rl_t rng, ls_t *ls)
+{
+	char c = lex();
+
+	if(strchr(RELOPS, c))
+	{
+		struct die *d = _parse_expr(ls);
+		struct pattern pt = { .op = c, .die = *d };
+
+		free(d);
+
+		return pt;
+	}
+	else
+	{
+		unlex();
+		return (struct pattern){ .op = 0, .set = _parse_set(rng, ls) };
+	}
+}
+
+/** Parses the body of a pattern match
+	@param rng the value range to use for sets
+	@param _patterns output for patterns
+	@param _actions output for actions
+	@param ls lexer state
+	@returns Amount of cases read
+*/
+int _parse_matches(rl_t rng, struct pattern **_patterns, struct die **_actions, ls_t *ls)
+{
+	int count = 0;
+
+	int capacity = 8;
+	struct pattern *patterns = xcalloc(capacity, sizeof(struct pattern));
+	struct die *actions = NULL;
+
+	pushParen(true);
+
+	do
+	{
+		if(count)
+			lexc(';');
+
+		if(count >= capacity)
+		{
+			capacity *= 2;
+			patterns = xrealloc(patterns, sizeof(struct pattern) * capacity);
+
+			if(actions)
+				actions = xrealloc(actions, sizeof(struct die) * capacity);
+		}
+
+		patterns[count] = _parse_pattern(rng, ls);
+
+		if(!count && lexm(':'))
+		{
+			actions = xcalloc(capacity, sizeof(struct die));
+			goto parse_action;
+		}
+		else if(count && actions)
+		{
+			lexc(':');
+			parse_action:;
+			struct die *d = _parse_expr(ls);
+
+			actions[count] = *d;
+
+			free(d);
+		}
+
+		count++;
+	} while(!lexm(']'));
+
+	assert(popParen(true));
+
+	*_patterns = xrealloc(patterns, sizeof(struct pattern) * count);
+	*_actions = actions ? xrealloc(actions, sizeof(struct die) * count) : NULL;
+
+	return count;
+}
+
 /** Iteratively parses every postfix unary operator.
 	left is optional and represents the expression the postfix is applied to.
 	Mutually recurses with _parse_expr() to parse parenthesized expressions. */
@@ -415,11 +557,11 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 			case '^':
 			case '_':
 			{
-				int sel = lexi();
+				int sel = lexc(INT);
 				int of;
 
 				if(lexm('/'))
-					of = lexi();
+					of = lexc(INT);
 				else
 				{
 					of = sel;
@@ -446,29 +588,16 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 
 			case '\\':
 			case '~':
+				left = d_clone((struct die){ .op = op, .reroll = { .v = left, .set = _parse_set(d_range(left), ls) } });
+			continue;
+
+			case '[':
 			{
-				struct set set = { .negated = lexm('!') };
-				rl_t rng = d_range(left);
+				struct die *d = d_clone((struct die){ .op = '[', .match =  { .v = left } });
 
-				do
-				{
-					int start = _parse_lim(rng, ls);
+				d->match.cases = _parse_matches(d_range(left), &d->match.patterns, &d->match.actions, ls);
 
-					if(lexm('-'))
-					{
-						int end = _parse_lim(rng, ls);
-
-						if(start > end)
-							errf("Invalid range specifier, ranges must be ordered");
-
-						set_insert(&set, start, end);
-					}
-					else
-						set_insert(&set, start, start);
-
-				} while(lexm(','));
-
-				left = d_clone((struct die){ .op = op, .reroll = { .v = left, .set = set } });
+				left = d;
 			}
 			continue;
 
@@ -504,15 +633,15 @@ static struct die *_parse_expr(ls_t *ls)
 			left->ternary.then = t;
 			left->ternary.otherwise = _parse_pexpr(NULL, ls);
 		}
-		else if(op == ')' && ls->pdepth)
-		{
-			ls->pdepth--;
+		else if(op == ')' && popParen(false))
 			return d_clone((struct die){ .op = '(', .unop = left });
+		else if((op == ']' || op == ';' || op == ':') && ls->parenDepth && (ls->parenStack & 1))
+		{
+			unlex();
+			return left;
 		}
-		else if(ls->pdepth)
-			badtks(BIOPS, UOPS, ")", "");
 		else
-			badtks(BIOPS, UOPS, "");
+			badtks(BIOPS, UOPS, ls->parenDepth == 0 ? "" : (ls->parenStack & 1) ? ";:]" : ")");
 	}
 }
 
@@ -524,8 +653,8 @@ struct die *parse(const char *str)
 	ls_t ls = (ls_t){ .pos = str };
 	struct die *d = _parse_expr(&ls);
 
-	if(ls.pdepth)
-		_badtk(ls, ')', -1);
+	if(ls.parenDepth)
+		_badtk(ls, (ls.parenStack & 1) ? ']' : ')', -1);
 
 	return d;
 }

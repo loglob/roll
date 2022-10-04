@@ -82,6 +82,33 @@ struct prob translate(struct die *d)
 		case __:
 			return p_mins(translate(d->biop.l), translate(d->biop.r));
 
+		case '[':
+		{
+			struct prob running = translate(d->match.v);
+			double total = 0.0;
+			struct prob ret = {};
+
+			for (int i = 0; i < d->match.cases; i++)
+			{
+				double hit = (1.0 - total) * pt_prob(d->match.patterns[i], &running);
+
+				total += hit;
+
+				if(d->match.actions && hit != 0.0)
+				{
+					struct prob tr = translate(d->match.actions + i);
+					ret = i ? p_merges(ret, tr, hit) : p_scales(tr, hit);
+				}
+			}
+
+			p_free(running);
+
+			if(d->match.actions)
+				return p_scales(ret, 1.0 / total);
+			else
+				return p_bool(total);
+		}
+
 		default:
 			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}

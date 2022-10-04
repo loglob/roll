@@ -4,34 +4,8 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <string.h>
-
+#include "types.h"
 #include "xmalloc.h"
-
-/** A range segment. Spans every integer between the given limits, inclusively.*/
-struct range
-{
-	/** The lower limit */
-	signed int start;
-	/** The upper limit */
-	signed int end;
-};
-
-/** A set of integers that permits ranges as primitives.
-	Technically a Bag as there is no delete operation. */
-struct set
-{
-	/** An array of rang segments, the disjunct union of which forms the overall set. Follows the axioms:
-		(0) All segments are ordered such that start <= end
-		(1) There are no overlapping ranges
-		(2) The ranges are ordered low to high
-		(3) Any two adjacent ranges are at least 1 apart, i.e. no two ranges could be merged
-	*/
-	struct range *entries;
-	/** The amount of segments in the entries array. */
-	size_t length;
-	/** Whether the set is negated */
-	bool negated;
-};
 
 #pragma region Internal Interface
 
@@ -249,21 +223,21 @@ bool set_empty(struct set set)
 }
 
 /** Prints a set to the given file stream. Formats it like the argument to \ or ~, without whitespace */
-void set_print(struct set s, FILE *f)
+void set_print(struct set s)
 {
 	if(s.negated)
-		fputc('!', f);
+		putchar('!');
 
 	for (size_t i = 0; i < s.length; i++)
 	{
 		if(i)
-			fputc(',', f);
+			putchar(',');
 
 		struct range r = s.entries[i];
 
 		if(r.start == r.end)
-			fprintf(f, "%d", r.start);
+			printf("%d", r.start);
 		else
-			fprintf(f, "%d-%d", r.start, r.end);
+			printf("%d-%d", r.start, r.end);
 	}
 }

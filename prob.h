@@ -8,21 +8,6 @@
 #include "settings.h"
 #include "set.h"
 
-/* Represents a probability function that follows 4 axioms:
-	(0) p ⊂ ℚ⁺∪{0}
-	(1) ∑p = 1
-	(2) p[0] > 0
-	(3) p[len - 1] > 0 */
-struct prob
-{
-	// the lowest
-	signed int low;
-	// the length of p
-	int len;
-	// the probability values
-	double *p;
-};
-
 /* The highest value of p */
 #define p_h(p) ((p).low + (p).len - 1)
 
@@ -193,11 +178,13 @@ void p_free(struct prob p)
 	free(p.p);
 }
 
-/* Emulates rolling on p and rerolling once if the value is in the given signed set. In-place. */
-struct prob p_rerolls(struct prob p, struct set set)
+/** Determines the probability that a result of p is in a set */
+double p_has(struct prob p, struct set set)
 {
-	if(set_hasAll(set, p.low, p_h(p)) || !set_hasAny(set, p.low, p_h(p)))
-		return p;
+	if(!set_hasAny(set, p.low, p_h(p)))
+		return 0.0;
+	if(set_hasAll(set, p.low, p_h(p)))
+		return 1.0;
 
 	double prr = 0.0;
 
@@ -206,6 +193,14 @@ struct prob p_rerolls(struct prob p, struct set set)
 		if(set_has(set, p.low + i))
 			prr += p.p[i];
 	}
+
+	return prr;
+}
+
+/* Emulates rolling on p and rerolling once if the value is in the given signed set. In-place. */
+struct prob p_rerolls(struct prob p, struct set set)
+{
+	double prr = p_has(p, set);
 
 	if(prr == 0.0 || prr == 1.0)
 		return p;
@@ -219,15 +214,13 @@ struct prob p_rerolls(struct prob p, struct set set)
 /* Like p_rerolls, with unlimited rerolls. */
 struct prob p_sans(struct prob p, struct set set)
 {
-	if(!set_hasAny(set, p.low, p_h(p)))
-	// no rerolls can take place
-		return p;
-	if(set_hasAll(set, p.low, p_h(p)))
-	// only rerolls can take place
-		eprintf("Every case of the function is discarded.\n");
-
-	double prr = 0.0;
+	double prr = p_has(p, set);
 	int start = 0, end = 0;
+
+	if(prr == 0.0)
+		return p;
+	if(prr == 1.0)
+		eprintf("Every case of the function is discarded.\n");
 
 	for (int i = 0; i < p.len; i++)
 	{
@@ -236,19 +229,14 @@ struct prob p_sans(struct prob p, struct set set)
 			if(i == start)
 				start++;
 
-			prr += p.p[i];
+			p.p[i] = 0;
 		}
 		else
+		{
+			p.p[i] *= 1.0 / (1.0 - prr);
 			end = p.len - i - 1;
+		}
 	}
-
-	if(prr == 0.0)
-		return p;
-	if(prr == 1.0)
-		eprintf("Every case of the function is discarded.\n");
-
-	for (int i = 0; i < p.len; i++)
-		p.p[i] *= !set_has(set, p.low + i) / (1 - prr);
 
 	if(start)
 	{

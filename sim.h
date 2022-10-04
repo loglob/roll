@@ -1,6 +1,7 @@
 // sim.h: Implements a die roll simulator
 #pragma once
 #include "die.h"
+#include "pattern.h"
 #include "ranges.h"
 #include "settings.h"
 #include "util.h"
@@ -255,6 +256,35 @@ int sim(struct die *d)
 			}
 			else
 				return r1;
+		}
+
+		case '[':
+		{
+			while(true)
+			{
+				int r = sim(d->match.v);
+
+				for (int i = 0; i < d->match.cases; i++)
+				{
+					if(pt_matches(d->match.patterns[i], r))
+					{
+						if(settings.verbose)
+						{
+							printf("Matched with case #%u: ", i);
+							pt_print(d->match.patterns[i]);
+							putchar('\n');
+						}
+
+						if(d->match.actions)
+							return sim(d->match.actions + i);
+						else
+							return true;
+					}
+				}
+
+				if(! d->match.actions)
+					return false;
+			}
 		}
 
 		default:

@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 						"These modes are applied to all following dice, until another mode is specified.\n"
 						"The default mode is -p\n"
 						"Dice:\n"
-						"A die is represented by the language:\n"
+						" A die is represented by the language:\n"
 						"	n d m  Expands to 'n x d m'.\n"
 						"	d n    Rolling a die with n sides.\n"
 						"	n      A constant value of n. n may be 0.\n"
@@ -68,6 +68,9 @@ int main(int argc, char **argv)
 						"	D$n    Like D! but only allows explosions, not implosions, so only maximum rolls are affected.\n"
 						"	       	Additionally, n specifies how many rounds of explosions are permitted.\n"
 						"	D$     Identical to D$1.\n"
+						"	D[pt]  Rolls on a die and checks whether the roll matches any given pattern, separated by ';'.\n"
+						"	        Each pattern may be followed by ':' and a die. That die is rolled when that pattern is hit.\n"
+						"	        If patterns don't have a die attached, returns whether any pattern matched. Otherwise, discard the roll if no patterns are hit.\n"
 						"	DxD    Rolls on the left die, then adds that many rolls of the right die.\n"
 						"	D*D    Rolls on both dice, then multiplies the results.\n"
 						"	D/D    Rolls on both dice, then divides the results.\n"
@@ -77,13 +80,19 @@ int main(int argc, char **argv)
 						"	D__D   Rolls on both dice, then selects the lower result.\n"
 						"	D>D    Rolls on both dice, then checks if left is larger than right.\n"
 						"	D<D    Rolls on both dice, then checks if left is smaller than right.\n"
+						"	D>=D    Rolls on both dice, then checks if left is larger than, or equal to, right.\n"
+						"	D<=D    Rolls on both dice, then checks if left is smaller than, or equal to, right.\n"
+						"	D=D    Rolls on both dice, then checks if left is equal to right.\n"
 						"	D?D    Rolls on the left die and, if the result is less than 1, replaces it with the right die.\n"
 						"	D?D:D  Rolls on the leftmost die, and returns the middle die if the result was greater than 0, and the rightmost die otherwise.\n"
 						"	(D)    The same as D, used for enforcing operator association.\n"
-						"Where n and m represent positive whole numbers, D represents another die, and F is a filter.\n"
-						"Operator precedence is as shown.\n"
-						"A filter is a list of signed numbers or ranges such as 'a-b' which selects every value between a and b inclusive.\n"
-						"Prefixing a filter with '!' negates it so that every value not listed is rerolled.\n"
+						" Where n and m represent positive whole numbers, D represents another die, and F is a filter.\n"
+						" Operator precedence is as shown.\n"
+						"Filters:\n"
+						" A filter is a list of signed numbers or ranges such as 'a-b' which selects every value between a and b inclusive.\n"
+						" Prefixing a filter with '!' negates it so that every value not listed is rerolled.\n"
+						"Patterns:\n"
+						" A pattern is either a set, or a die prefixed with a relational operator (<,>,>=,<=,=)\n"
 						, argv[0]);
 				return EXIT_SUCCESS;
 
@@ -329,7 +338,7 @@ int main(int argc, char **argv)
 			break;
 		}
 
-		d_free(d);
+		d_freeP(d);
 	}
 
 	if(settings.mode == PREDICT_COMP && settings.compare)

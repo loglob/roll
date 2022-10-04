@@ -2,12 +2,13 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <limits.h>
 #include <errno.h>
-#include <string.h>
 #include <stdio.h>
 #include "xmalloc.h"
+
+#define CLONE(func, type) type *func(type x) { type *y = xmalloc(sizeof(x)); *y = x; return y; }
+#define FREE_P(xfree, type) void xfree##P (type *x) { if(x) { xfree(*x); free(x); } }
 
 /* like printf, but prints onto stderr and exits with EXIT_FAILURE. */
 __attribute__((noreturn))
