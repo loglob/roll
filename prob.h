@@ -393,8 +393,6 @@ struct prob p_mulks(struct prob p, signed int x)
 /* adds l onto r*q. Leaves l and r unchanged */
 struct prob p_merge(struct prob l, struct prob r, double q)
 {
-	assert(q > 0);
-
 	int low = min(l.low, r.low);
 	int high = max(l.low + l.len, r.low + r.len) - 1;
 	int len = high - low + 1;
