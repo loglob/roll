@@ -1,7 +1,7 @@
 // pattern.h: Pattern matching structures & code
 
 /* Patterns are one of:
-	rel := '<' | '>' | '>=' | '<=' | '=' ;
+	rel := '<' | '>' | '>=' | '<=' | '=' | '/=' ;
 
 	P := T
 		| F
@@ -121,10 +121,14 @@ double pt_prob(struct pattern pt, struct prob *p)
 			break;
 
 			case '=':
+			case NEQ:
 			{
 				for (int i = 0; i < p->len; i++)
 				{
 					double peq = probof(q, p->low + i);
+
+					if(pt.op == NEQ)
+						peq = 1.0 - peq;
 
 					ret += peq * p->p[i];
 					p->p[i] *= (1.0 - peq);

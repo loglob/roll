@@ -16,7 +16,9 @@
 #define LT_EQ '\xF9'
 // equivalent to (char)-8
 #define GT_EQ '\xF8'
-#define RELOPS "<>=\xF9\xF8"
+// equivalent to (char)-9
+#define NEQ '\xF7'
+#define RELOPS "<>=\xF9\xF8\xF7"
 #define BIOPS "+-*x/?" RELOPS "\xFC\xFB"
 #define SELECT "^_\xFA"
 #define REROLLS "~\\"
@@ -125,6 +127,7 @@ void d_print(struct die *d)
 		case LT_EQ:
 		case GT_EQ:
 		case '=':
+		case NEQ:
 			putchar('(');
 			d_print(d->biop.l);
 			printf(") %s (", tkstr(d->op));
@@ -268,6 +271,7 @@ void d_printTree(struct die *d, int depth)
 		b(GT_EQ, "GREATER THAN OR EQUAL TO")
 		b(LT_EQ, "LESS THAN OR EQUAL TO")
 		b('=', "EQUAL TO")
+		b(NEQ, "NOT EQUAL TO")
 
 		b('+', "ADD")
 		b('-', "SUB")

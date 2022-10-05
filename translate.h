@@ -69,6 +69,8 @@ struct prob translate(struct die *d)
 			return p_bool(p_leq(translate(d->biop.r), translate(d->biop.l)));
 		case '=':
 			return p_bool(p_eq(translate(d->biop.l), translate(d->biop.r)));
+		case NEQ:
+			return p_adds(p_constant(1), p_negs(p_bool(p_eq(translate(d->biop.l), translate(d->biop.r)))));
 
 		case '?':
 			return p_coalesces(translate(d->biop.l), translate(d->biop.r));

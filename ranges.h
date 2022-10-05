@@ -91,7 +91,10 @@ rl_t range_mul(rl_t l, rl_t r)
 */
 rl_t d_range(struct die *d)
 {
-	switch(d->op)
+	if(strchr(RELOPS, d->op))
+		// (over)simplify all boolean expressions down to this, can't be bothered to do intersection checks
+		return range_lim(0,1);
+	else switch(d->op)
 	{
 		case INT:
 			return range_lim(d->constant, d->constant);
@@ -213,14 +216,6 @@ rl_t d_range(struct die *d)
 			rl_t l = d_range(d->biop.l), r = d_range(d->biop.l);
 			return range_lim(min(l.low, r.low), min(l.high, r.high));
 		}
-
-		case '<':
-		case '>':
-		case LT_EQ:
-		case GT_EQ:
-		case '=':
-		// (over)simplify all boolean expressions down to this, can't be bothered to do intersection checks
-			return range_lim(0,1);
 
 		case '[':
 		{

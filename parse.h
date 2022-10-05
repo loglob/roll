@@ -4,6 +4,7 @@
 
 INT := [1-9][0-9]* ;
 n := INT | 0+ | - INT ;
+RELOP := < | > | <= | >= | = ;
 
 lim := n
 	| ^
@@ -20,6 +21,18 @@ set := range
 	| set , range
 ;
 
+pattern := set
+	| RELOP die
+;
+
+case := pattern
+	| pattern ':' die
+;
+
+cases := case
+	| case ';' cases
+;
+
 die := n
 	| 'd' die
 	| die ~ set
@@ -34,6 +47,7 @@ die := n
 	| die !
 	| die $ INT
 	| die $
+	| die [ cases ]
 	| die x die
 	| die * die
 	| die / die
@@ -41,11 +55,7 @@ die := n
 	| die - die
 	| die ^^ die
 	| die __ die
-	| die > die
-	| die >= die
-	| die < die
-	| die >= die
-	| die = die
+	| die RELOP die
 	| die ? die
 	| die ? die : die
 	| ( die )
@@ -64,8 +74,8 @@ die := n
 #include "die.h"
 #include "pattern.h"
 
-static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=" };
-static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ };
+static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=", "/=" };
+static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ, NEQ };
 
 #define MAX_PAREN_DEPTH (sizeof(unsigned long long) * CHAR_BIT)
 
@@ -310,16 +320,12 @@ static bool _popParen(struct lexState *ls, bool bracket)
 	*/
 static int precedence(char op)
 {
-	switch(op)
+	if(strchr(RELOPS, op))
+		return 10;
+	else switch(op)
 	{
 		case '?':
 			return 20;
-		case '<':
-		case '>':
-		case LT_EQ:
-		case GT_EQ:
-		case '=':
-			return 10;
 		case UPUP:
 		case __:
 			return 8;
