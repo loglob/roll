@@ -1,4 +1,5 @@
-/* represents probability functions that map N onto Q, with the sum of every value equaling 1. */
+/* represents probability functions that map N onto Q, with the sum of every value equaling 1.
+	any function ending on 's' acts in-place or frees its arguments after use. */
 #pragma once
 #include <stdlib.h>
 #include <assert.h>
@@ -7,6 +8,9 @@
 #include "ranges.h"
 #include "settings.h"
 #include "set.h"
+
+#define CLEAN_BIOP(T, name) T name##s (struct prob l, struct prob r) {\
+	T res = name(l,r); p_free(l); if(l.p != r.p) p_free(r); return res; }
 
 /* The highest value of p */
 #define p_h(p) ((p).low + (p).len - 1)
@@ -274,18 +278,7 @@ struct prob p_add(struct prob l, struct prob r)
 	};
 }
 
-/* Like p_add. In-place. */
-struct prob p_adds(struct prob l, struct prob r)
-{
-	struct prob m = p_add(l, r);
-
-	p_free(l);
-
-	if(l.p != r.p)
-		p_free(r);
-
-	return m;
-}
+CLEAN_BIOP(struct prob, p_add)
 
 /* Emulates rolling on l and r, then multiplying the results. */
 struct prob p_cmul(struct prob l, struct prob r)
@@ -300,17 +293,7 @@ struct prob p_cmul(struct prob l, struct prob r)
 	return (struct prob){ .low = res.low, .len = res.len, .p = p };
 }
 
-/* Like p_cmul(), in-place. */
-struct prob p_cmuls(struct prob l, struct prob r)
-{
-	struct prob v = p_cmul(l, r);
-	p_free(l);
-
-	if(l.p != r.p)
-		p_free(r);
-
-	return v;
-}
+CLEAN_BIOP(struct prob, p_cmul)
 
 /* l/r. Division by 0 is discarded. */
 struct prob p_cdiv(struct prob l, struct prob r)
@@ -341,6 +324,8 @@ struct prob p_cdiv(struct prob l, struct prob r)
 
 	return (struct prob){ .low = res.low, .len = len, .p = p };
 }
+
+CLEAN_BIOP(struct prob, p_cdiv)
 
 /* Internal implementation of p_mul. Inconsistent on being in-place or not. */
 struct prob _p_mulk(struct prob p, signed int x)
@@ -618,6 +603,8 @@ double p_leq(struct prob l, struct prob r)
 	return prob;
 }
 
+CLEAN_BIOP(double, p_leq)
+
 double p_eq(struct prob l, struct prob r)
 {
 	double prob = 0.0;
@@ -627,6 +614,8 @@ double p_eq(struct prob l, struct prob r)
 
 	return prob;
 }
+
+CLEAN_BIOP(double, p_eq)
 
 /* P(x > 0) */
 double p_true(struct prob x)
@@ -692,7 +681,6 @@ struct prob p_terns(struct prob cond, struct prob then, struct prob otherwise)
 
 	return p_merges(p_scales(then, p), otherwise, 1 - p);
 }
-
 
 /* Simulates n rounds of exploding-only rolls on p. In-place. */
 struct prob p_explode_ns(const struct prob p, int n)
@@ -803,5 +791,8 @@ struct prob p_dies(struct prob p)
 			sum = p_merges(sum, p_uniform(p.low + i), p.p[1]);
 	}
 
+	p_free(p);
 	return sum;
 }
+
+#undef CLEAN_BIOP
