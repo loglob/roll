@@ -277,7 +277,7 @@ static void _pushParen(struct lexState *ls, bool bracket)
 		eprintf("Too many parenthesis layers, maximum is %zu\n", MAX_PAREN_DEPTH);
 
 	ls->parenDepth++;
-	ls->parenStack = bracket | (ls->parenStack >> 1);
+	ls->parenStack = bracket | (ls->parenStack << 1);
 }
 
 static bool _popParen(struct lexState *ls, bool bracket)
