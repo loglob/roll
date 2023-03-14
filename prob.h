@@ -536,8 +536,11 @@ struct prob p_cuts(struct prob p, int l, int r)
 	p.low += l;
 
 	assert(p.len > 0);
-	memmove(p.p, p.p + l, p.len);
-	p.p = realloc(p.p, p.len);
+	memmove(p.p, p.p + l, p.len * sizeof(*p.p));
+	void *rp = realloc(p.p, sizeof(*p.p) * p.len);
+
+	if(rp)
+		p.p = rp;
 
 	return p;
 }
@@ -637,16 +640,16 @@ struct prob p_coalesces(struct prob l, struct prob r)
 		return l;
 	}
 
-	int i = -l.low + 1;
+	int drop = -l.low + 1;
 
-	if(i >= l.len)
+	if(drop >= l.len)
 	{
 		p_free(l);
 		return r;
 	}
 
 	double p = p_true(l);
-	return p_merges(p_cuts(l, i, 0), r, 1 - p);
+	return p_merges(p_cuts(l, drop, 0), r, 1 - p);
 }
 
 /* Multiplies every probability of p by k. In-place.

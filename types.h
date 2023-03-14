@@ -92,7 +92,7 @@ struct pattern
 	(3) p[len - 1] > 0 */
 struct prob
 {
-	// the lowest
+	// the lowest value in p
 	signed int low;
 	// the length of p
 	int len;
