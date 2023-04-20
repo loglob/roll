@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#ifndef __attribute_malloc__
+#define __attribute_malloc__
+#endif
+
 #define X(f, argsDecl, args, doCheck) __attribute_malloc__ void *x##f argsDecl \
 	{ void *x = f args; if((doCheck) && !x) { perror(#f); exit(EXIT_FAILURE); } return x; }
 
