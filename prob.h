@@ -500,7 +500,7 @@ struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 		return p_mulk(p, sel);
 
 	int *v = xcalloc(of, sizeof(int));
-	struct prob c = (struct prob){ .len = (p.len-1) * sel + 1, .low = sel };
+	struct prob c = (struct prob){ .len = (p.len-1) * sel + 1, .low = sel * p.low };
 	c.p = xcalloc(c.len, sizeof(double));
 
 	do
