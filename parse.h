@@ -564,20 +564,30 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 			case '_':
 			{
 				int sel = lexc(INT);
-				int of;
+				int of, bust;
 
 				if(lexm('/'))
+				{
 					of = lexc(INT);
+
+					if(op == UP_BANG && lexm('/'))
+						bust = lexc(INT);
+					else
+						bust = of - (of/2);
+				}
 				else
 				{
 					of = sel;
-					sel = (op == UP_BANG) ? of - of/2 + !(of%2) : 1;
+					sel = 1;
+					bust = of - (of/2);
 				}
 
 				if(sel > of)
 					errf("Invalid selection value: '%u/%u'", sel, of);
+				if(bust > of)
+					errf("Invalid selection value: '%u/%u/%u'", sel, of, bust);
 
-				left = d_clone((struct die){ .op = op, .select= { .v = left, .of = of, .sel = sel } });
+				left = d_clone((struct die){ .op = op, .select= { .v = left, .of = of, .sel = sel, .bust = bust } });
 			}
 			continue;
 

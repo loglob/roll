@@ -18,7 +18,7 @@ struct range
 	Technically a Bag as there is no delete operation. */
 struct set
 {
-	/** An array of rang segments, the disjunct union of which forms the overall set. Follows the axioms:
+	/** An array of range segments, the disjunct union of which forms the overall set. Follows the axioms:
 		(0) All segments are ordered such that start <= end
 		(1) There are no overlapping ranges
 		(2) The ranges are ordered low to high
@@ -43,7 +43,7 @@ struct die
 		// valid if op in BIOPS
 		struct { struct die *l, *r; } biop;
 		// valid if op in SELECT
-		struct { struct die *v; int sel, of; } select;
+		struct { struct die *v; int sel, of, bust; } select;
 		/** valid if op in REROLLS*/
 		struct
 		{

@@ -460,36 +460,6 @@ struct prob p_selectOne(struct prob p, int of, bool selHigh)
 	#undef choose
 }
 
-/* Like p_selectOne with selHigh=true, but 'goes bust' if majority of rolls are lowest. Leaves p intact. */
-struct prob p_selectOne_bust(struct prob p, int sel, int of)
-{
-	assert(p.len);
-
-	int *choose = chooseBuf(of);
-	// p without 1s
-	struct prob p2 = p_sans(p_dup(p), SINGLETON(p.low, p.low));
-	struct prob total = p_constant(p.low - 1);
-
-	// range over # of 1s
-	for (int n = 0; n < sel; n++)
-	{
-		// prob. of rolling n 1s
-		double p_n = pow(*p.p, n) * pow(1 - *p.p, of - n) * (n ? choose[n-1] : 1);
-
-		// value distribution for that amount of 1s
-		struct prob vals = p_selectOne(p_dup(p2), of - n, true);
-
-		total = p_merges(total, vals, p_n);
-		// keep track of covered cases
-		total.p[0] -= p_n;
-	}
-
-	p_free(p2);
-	free(choose);
-
-	return total;
-}
-
 /* Emulates rolling on p of times, then adding the sel highest/lowest rolls. */
 struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 {
@@ -521,6 +491,48 @@ struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 
 	free(v);
 	return c;
+}
+
+/** Like p_select with selHigh=true, but 'goes bust' if majority of rolls are lowest. Leaves p intact.
+	@param sel How many values to select
+	@param of How many values to select from
+	@param bust How many 1s cause the selection to go bust
+*/
+struct prob p_select_bust(struct prob p, int sel, int of, int bust)
+{
+	assert(sel > 0 && sel <= of);
+	assert(bust > 0 && bust <= of);
+	assert(p.len > 0);
+
+	int *choose = chooseBuf(of);
+	// p without 1s
+	struct prob p2 = p_sans(p_dup(p), SINGLETON(p.low, p.low));
+	struct prob total = p_constant(p.low - 1);
+
+	// range over # of 1s
+	for (int n = 0; n < bust; n++)
+	{
+		// prob. of rolling n 1s
+		double p_n = pow(*p.p, n) * pow(1 - *p.p, of - n) * (n ? choose[n-1] : 1);
+
+		int left = of - n;
+
+		// value distribution for that amount of 1s
+		struct prob vals = p_select(p_dup(p2), min(sel, left), left, true); // <- dup needed?
+
+		// pad selection with 1s
+		if(sel > left)
+			p.low += (sel - left) * p.low;
+
+		total = p_merges(total, vals, p_n);
+		// keep track of covered cases
+		total.p[0] -= p_n;
+	}
+
+	p_free(p2);
+	free(choose);
+
+	return total;
 }
 
 /* Cuts l values from the left and r values from the right of the given probability array.

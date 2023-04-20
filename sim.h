@@ -115,7 +115,7 @@ int sim(struct die *d)
 			{
 				rl_t lim = d_range(d->select.v);
 
-				for (int i = 0; i <= d->select.of/2; i++)
+				for (int i = 0; i < d->select.bust; i++)
 				{
 					if(buf[i] != lim.low)
 						goto not_bust;

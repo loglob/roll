@@ -41,7 +41,7 @@ struct prob translate(struct die *d)
 		case UP_BANG:
 		{
 			struct prob p = translate(d->select.v);
-			struct prob res = p_selectOne_bust(p, d->select.sel, d->select.of);
+			struct prob res = p_select_bust(p, d->select.sel, d->select.of, d->select.bust);
 			p_free(p);
 
 			return res;

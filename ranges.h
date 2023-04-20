@@ -202,7 +202,7 @@ rl_t d_range(struct die *d)
 		{
 			rl_t r = d_range(d->select.v);
 
-			return range_lim(r.low - 1, r.high);
+			return range_lim(r.low - 1, r.high * d->select.sel);
 		}
 
 		case UPUP:

@@ -143,7 +143,7 @@ void d_print(struct die *d)
 
 		case UP_BANG:
 			d_print(d->select.v);
-			printf(" ^!%u", d->select.of);
+			printf(" ^!%u/%u/%u", d->select.sel, d->select.of, d->select.bust);
 		break;
 
 		case '~':
@@ -294,7 +294,7 @@ void d_printTree(struct die *d, int depth)
 		break;
 
 		case UP_BANG:
-			printf("SELECT HIGHEST FROM %u WITHOUT GOING BUST\n", d->select.of);
+			printf("SELECT %u HIGHEST FROM %u WITH LESS THAN %u 1s\n", d->select.sel, d->select.of, d->select.bust);
 			d_printTree(d->select.v, depth + 1);
 		break;
 
