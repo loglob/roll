@@ -5,6 +5,7 @@
 #include "ranges.h"
 #include "settings.h"
 #include "util.h"
+#include <stdlib.h>
 
 /* Generates a random number in [1..pips] (uniform) */
 static inline int roll(int pips)
@@ -101,6 +102,7 @@ int sim(struct die *d)
 		case '^':
 		case '_':
 		case UP_BANG:
+		case UP_DOLLAR:
 		{
 			int *buf = xcalloc(sizeof(int), d->select.of);
 
@@ -110,11 +112,11 @@ int sim(struct die *d)
 			qsort(buf, d->select.of, sizeof(int), intpcomp);
 			int *selected = buf + ((d->op == '_') ? 0 : (d->select.of - d->select.sel));
 			int sum = sumls(selected, d->select.sel);
+			rl_t lim;
 
-			if(d->op == UP_BANG)
+			if(d->op == UP_BANG || d->op == UP_DOLLAR)
 			{
-				rl_t lim = d_range(d->select.v);
-
+				lim = d_range(d->select.v);
 				for (int i = 0; i < d->select.bust; i++)
 				{
 					if(buf[i] != lim.low)
@@ -129,20 +131,49 @@ int sim(struct die *d)
 				}
 
 				sum = lim.low - 1;
+				goto bust;
 			}
-			else not_bust: if(settings.verbose)
+
+			not_bust:
+			if(settings.verbose)
 			{
 				printf("Got ");
 				prls(buf, d->select.of);
 				printf(" and selected ");
-				prlsd(selected, d->select.sel, " + ");
+				sum = prSum(selected, d->select.sel);
+			}
+			else
+				sum = sumls(selected, d->select.sel);
 
-				if(d->select.sel == 1)
-					putchar('\n');
+			if(d->op == UP_DOLLAR)
+			{
+				int n_max = 0;
+
+				for (int i = d->select.of; --i && buf[i] == lim.high;)
+					n_max++;
+
+				int explosions = n_max/EXPLODE_RATIO;
+
+				if(explosions <= 0)
+					goto bust;
+
+				int *exploded = calloc(sizeof(int), explosions);
+
+				for (int i = 0; i < explosions; i++)
+					exploded[i] = sim(d->select.v);
+
+				if(settings.verbose)
+				{
+					printf("Exploded %u times, adding ", explosions);
+					sum += prSum(exploded, explosions);
+				}
 				else
-					printf(" = %d\n", sum);
+					sum += sumls(exploded, explosions);
+
+				free(exploded);
 			}
 
+			bust:
 			free(buf);
 			return sum;
 		}
@@ -201,11 +232,7 @@ int sim(struct die *d)
 			int sum = sumls(buf, rolls);
 
 			if(settings.verbose && rolls > 1)
-			{
-				//printf("Rolled ");
-				prlsd(buf, rolls, " + ");
-				printf(" = %d\n", sum);
-			}
+				prSum(buf, rolls);
 
 			free(buf);
 			return sum;

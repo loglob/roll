@@ -46,6 +46,21 @@ int sumls(const signed int *ls, size_t c)
 	return sum;
 }
 
+/** Prints an array of ints and (if needed) their sum. Prints a newline afterwards.
+	@returns The sum
+*/
+int prSum(const signed int *ls, size_t c)
+{
+	prlsd(ls, c, " + ");
+	int n = sumls(ls, c);
+
+	if(c > 1)
+		printf(" = %d", n);
+
+	putchar('\n');
+	return n;
+}
+
 /* like strol, but with int instead of long */
 signed int strtoi(const char *inp, char **end, int base)
 {

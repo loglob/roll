@@ -36,16 +36,11 @@ struct prob translate(struct die *d)
 
 		case '^':
 		case '_':
-			return p_select(translate(d->select.v), d->select.sel, d->select.of, d->op == '^');
+			return p_selects(translate(d->select.v), d->select.sel, d->select.of, d->op == '^', false);
 
 		case UP_BANG:
-		{
-			struct prob p = translate(d->select.v);
-			struct prob res = p_select_bust(p, d->select.sel, d->select.of, d->select.bust);
-			p_free(p);
-
-			return res;
-		}
+		case UP_DOLLAR:
+			return p_selects_bust(translate(d->select.v), d->select.sel, d->select.of, d->select.bust, d->op == UP_DOLLAR);
 
 		case '~':
 			return p_rerolls(translate(d->reroll.v), d->reroll.set);

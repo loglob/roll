@@ -18,12 +18,16 @@
 #define GT_EQ '\xF8'
 // equivalent to (char)-9
 #define NEQ '\xF7'
+// equivalent to (char)-10
+#define UP_DOLLAR '\xF6'
 #define RELOPS "<>=\xF9\xF8\xF7"
 #define BIOPS "+-*x/?" RELOPS "\xFC\xFB"
-#define SELECT "^_\xFA"
+#define SELECT "^_\xFA\xF6"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!$d("
 #define SPECIAL BIOPS UOPS ",/():;[]"
+
+#define EXPLODE_RATIO 2
 
 extern const char *tkstr(char tok);
 
@@ -138,12 +142,13 @@ void d_print(struct die *d)
 		case '^':
 		case '_':
 			d_print(d->select.v);
-			printf(" ^%u/%u", d->select.sel, d->select.of);
+			printf(" %c%u/%u", d->op, d->select.sel, d->select.of);
 		break;
 
 		case UP_BANG:
+		case UP_DOLLAR:
 			d_print(d->select.v);
-			printf(" ^!%u/%u/%u", d->select.sel, d->select.of, d->select.bust);
+			printf(" %s%u/%u/%u", tkstr(d->op), d->select.sel, d->select.of, d->select.bust);
 		break;
 
 		case '~':
@@ -294,7 +299,9 @@ void d_printTree(struct die *d, int depth)
 		break;
 
 		case UP_BANG:
-			printf("SELECT %u HIGHEST FROM %u WITH LESS THAN %u 1s\n", d->select.sel, d->select.of, d->select.bust);
+		case UP_DOLLAR:
+			printf("SELECT %u HIGHEST FROM %u WITH LESS THAN %u 1s%s\n", d->select.sel, d->select.of, d->select.bust,
+				d->op == UP_DOLLAR ? " AND EXPLOSIONS" : "");
 			d_printTree(d->select.v, depth + 1);
 		break;
 

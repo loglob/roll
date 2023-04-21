@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "die.h"
 #include "util.h"
 #include "ranges.h"
 #include "settings.h"
@@ -16,7 +17,9 @@
 #define p_h(p) ((p).low + (p).len - 1)
 
 /** Stores the 'next' combination of n numbers between 0 and max (exclusive) in ind.
-	@param max The amount of numbers to choose from
+	Always returns distinct, sorted (descending) arrays.
+	Iterates in ascending lexicographic order.
+	@param max The amount of numbers to choose from, i.e. the exclusive upper bound
 	@param n The amount of choices to make, i.e. the number of entries in ind
 	@param ind A buffer ∈ [0;max]ⁿ containing the last permutation, which is overwritten with the next one
 	@returns false if the all-0-combination was returned, true otherwise.
@@ -424,7 +427,7 @@ struct prob p_muls(struct prob l, struct prob r)
 }
 
 /* Emulates rolling on p of times, and then selecting the highest/lowest value. In-place. */
-struct prob p_selectOne(struct prob p, int of, bool selHigh)
+struct prob p_selectsOne(struct prob p, int of, bool selHigh)
 {
 	assert(of > 0);
 
@@ -460,18 +463,30 @@ struct prob p_selectOne(struct prob p, int of, bool selHigh)
 	#undef choose
 }
 
-/* Emulates rolling on p of times, then adding the sel highest/lowest rolls. */
-struct prob p_select(struct prob p, int sel, int of, bool selHigh)
+void p_incr(struct prob *p, struct prob q)
+{
+	struct prob r = p_add(*p, q);
+	p_free(*p);
+	*p = r;
+}
+
+/* Emulates rolling on p of times, then adding the sel highest/lowest rolls. In-place. */
+struct prob p_selects(struct prob p, int sel, int of, bool selHigh, bool explode)
 {
 	// Use the MUCH faster selectOne algorithm (O(n) vs O(n!)
 	if(sel == 1)
-		return p_selectOne(p, of, selHigh);
+		return p_selectsOne(p, of, selHigh);
 	if(sel == of)
-		return p_mulk(p, sel);
+		return p_mulks(p, sel);
 
 	int *v = xcalloc(of, sizeof(int));
-	struct prob c = (struct prob){ .len = (p.len-1) * sel + 1, .low = sel * p.low };
+	int low = sel * p.low + (of/EXPLODE_RATIO)*(explode && p.low < 0 ? p.low : 0);
+	int high = (sel + explode*of/EXPLODE_RATIO) * p_h(p);
+	struct prob c = (struct prob){ .len = high - low + 1, .low = low };
 	c.p = xcalloc(c.len, sizeof(double));
+
+	struct prob hitV = p_constant(0);
+	int critC = 0;
 
 	do
 	{
@@ -486,10 +501,29 @@ struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 				sum += v[i];
 		}
 
-		c.p[sum] += q;
+		if(explode)
+		{
+			int crit = 0;
+
+			for (int i = 0; i < of && v[i] == p.len - 1; i++)
+				crit += i % EXPLODE_RATIO == EXPLODE_RATIO - 1;
+
+			if(crit != critC)
+			{
+				assert(crit == critC + 1);
+				p_incr(&hitV, p);
+				critC = crit;
+			}
+		}
+
+		for (int i = 0; i < hitV.len; i++)
+			c.p[sum + hitV.low + i] += q * hitV.p[i];
 	} while(combinations(p.len, of, v));
 
 	free(v);
+	p_free(hitV);
+	p_free(p);
+
 	return c;
 }
 
@@ -498,35 +532,41 @@ struct prob p_select(struct prob p, int sel, int of, bool selHigh)
 	@param of How many values to select from
 	@param bust How many 1s cause the selection to go bust
 */
-struct prob p_select_bust(struct prob p, int sel, int of, int bust)
+struct prob p_selects_bust(struct prob p, int sel, int of, int bust, bool explode)
 {
 	assert(sel > 0 && sel <= of);
 	assert(bust > 0 && bust <= of);
 	assert(p.len > 0);
 
-	int *choose = chooseBuf(of);
+	const int bustV = p.low - 1;
+	struct prob total = p_constant(bustV);
+
+	if(p.len == 1)
+		return total;
+
+	int *const choose = chooseBuf(of);
+	const double p1 = *p.p;
 	// p without 1s
-	struct prob p2 = p_sans(p_dup(p), SINGLETON(p.low, p.low));
-	struct prob total = p_constant(p.low - 1);
+	const struct prob p2 = p_sans(p, SINGLETON(p.low, p.low));
 
 	// range over # of 1s
 	for (int n = 0; n < bust; n++)
 	{
 		// prob. of rolling n 1s
-		double p_n = pow(*p.p, n) * pow(1 - *p.p, of - n) * (n ? choose[n-1] : 1);
+		double p_n = pow(p1, n) * pow(1 - p1, of - n) * (n ? choose[n-1] : 1);
 
 		int left = of - n;
 
 		// value distribution for that amount of 1s
-		struct prob vals = p_select(p_dup(p2), min(sel, left), left, true); // <- dup needed?
+		struct prob vals = p_selects(p_dup(p2), min(sel, left), left, true, explode);
 
 		// pad selection with 1s
 		if(sel > left)
-			p.low += (sel - left) * p.low;
+			vals.low += (sel - left) * vals.low;
 
 		total = p_merges(total, vals, p_n);
 		// keep track of covered cases
-		total.p[0] -= p_n;
+		total.p[bustV - total.low] -= p_n;
 	}
 
 	p_free(p2);

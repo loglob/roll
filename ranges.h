@@ -205,6 +205,13 @@ rl_t d_range(struct die *d)
 			return range_lim(r.low - 1, r.high * d->select.sel);
 		}
 
+		case UP_DOLLAR:
+		{
+			rl_t r = d_range(d->select.v);
+
+			return range_lim(r.low - 1, r.high * (d->select.sel + d->select.of/ EXPLODE_RATIO ));
+		}
+
 		case UPUP:
 		{
 			rl_t l = d_range(d->biop.l), r = d_range(d->biop.l);
