@@ -103,6 +103,7 @@ int sim(struct die *d)
 		case '_':
 		case UP_BANG:
 		case UP_DOLLAR:
+		case DOLLAR_UP:
 		{
 			int *buf = xcalloc(sizeof(int), d->select.of);
 
@@ -145,7 +146,7 @@ int sim(struct die *d)
 			else
 				sum = sumls(selected, d->select.sel);
 
-			if(d->op == UP_DOLLAR)
+			if(d->op == UP_DOLLAR || d->op == DOLLAR_UP)
 			{
 				int n_max = 0;
 

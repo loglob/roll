@@ -20,9 +20,11 @@
 #define NEQ '\xF7'
 // equivalent to (char)-10
 #define UP_DOLLAR '\xF6'
+// equivalent to (char)-11
+#define DOLLAR_UP '\xF5'
 #define RELOPS "<>=\xF9\xF8\xF7"
 #define BIOPS "+-*x/?" RELOPS "\xFC\xFB"
-#define SELECT "^_\xFA\xF6"
+#define SELECT "^_\xFA\xF6\xF5"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!$d("
 #define SPECIAL BIOPS UOPS ",/():;[]"
@@ -141,8 +143,9 @@ void d_print(struct die *d)
 
 		case '^':
 		case '_':
+		case DOLLAR_UP:
 			d_print(d->select.v);
-			printf(" %c%u/%u", d->op, d->select.sel, d->select.of);
+			printf(" %s%u/%u", tkstr(d->op), d->select.sel, d->select.of);
 		break;
 
 		case UP_BANG:
@@ -294,7 +297,9 @@ void d_printTree(struct die *d, int depth)
 		break;
 
 		case '^':
-			printf("SELECT %u HIGHEST FROM %u\n", d->select.sel, d->select.of);
+		case DOLLAR_UP:
+			printf("SELECT %u HIGHEST FROM %u%s\n", d->select.sel, d->select.of,
+				d->op == DOLLAR_UP ? " WITH EXPLOSIONS" : "");
 			d_printTree(d->select.v, depth + 1);
 		break;
 

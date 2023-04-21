@@ -74,8 +74,8 @@ die := n
 #include "die.h"
 #include "pattern.h"
 
-static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=", "/=", "^$" };
-static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ, NEQ, UP_DOLLAR };
+static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=", "/=", "^$", "$^" };
+static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ, NEQ, UP_DOLLAR, DOLLAR_UP };
 
 #define MAX_PAREN_DEPTH (sizeof(unsigned long long) * CHAR_BIT)
 
@@ -561,6 +561,7 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 		{
 			case UP_BANG:
 			case UP_DOLLAR:
+			case DOLLAR_UP:
 			case '^':
 			case '_':
 			{

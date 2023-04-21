@@ -212,6 +212,15 @@ rl_t d_range(struct die *d)
 			return range_lim(r.low - 1, r.high * (d->select.sel + d->select.of/ EXPLODE_RATIO ));
 		}
 
+		case DOLLAR_UP:
+		{
+			rl_t r = d_range(d->select.v);
+
+			return range_lim(r.low * d->select.sel,
+				// this is a bit over-optimistic by assuming that hitting the maximum is possible without exploding
+				r.high * d->select.sel + (r.high < 0 ? 0 : r.high) * d->select.of / EXPLODE_RATIO);
+		}
+
 		case UPUP:
 		{
 			rl_t l = d_range(d->biop.l), r = d_range(d->biop.l);

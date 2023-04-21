@@ -36,7 +36,8 @@ struct prob translate(struct die *d)
 
 		case '^':
 		case '_':
-			return p_selects(translate(d->select.v), d->select.sel, d->select.of, d->op == '^', false);
+		case DOLLAR_UP:
+			return p_selects(translate(d->select.v), d->select.sel, d->select.of, d->op != '_', d->op == DOLLAR_UP);
 
 		case UP_BANG:
 		case UP_DOLLAR:

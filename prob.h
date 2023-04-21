@@ -474,10 +474,13 @@ void p_incr(struct prob *p, struct prob q)
 struct prob p_selects(struct prob p, int sel, int of, bool selHigh, bool explode)
 {
 	// Use the MUCH faster selectOne algorithm (O(n) vs O(n!)
-	if(sel == 1)
+	if(sel == 1 && !explode)
 		return p_selectsOne(p, of, selHigh);
-	if(sel == of)
+	if(sel == of && !explode)
 		return p_mulks(p, sel);
+
+	// explosions must select high
+	assert(!explode || selHigh);
 
 	int *v = xcalloc(of, sizeof(int));
 	int low = sel * p.low + (of/EXPLODE_RATIO)*(explode && p.low < 0 ? p.low : 0);
