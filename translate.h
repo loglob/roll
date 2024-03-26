@@ -102,7 +102,12 @@ struct prob translate(struct die *d)
 			p_free(running);
 
 			if(d->match.actions)
+			{
+				if(total == 0.0)
+					eprintf("Invalid pattern match; All cases are impossible\n");
+
 				return p_scales(ret, 1.0 / total);
+			}
 			else
 				return p_bool(total);
 		}
