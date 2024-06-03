@@ -1,13 +1,25 @@
 #define _POSIX_C_SOURCE 200809L
-#include <time.h>
-#include <stdlib.h>
+#include <math.h>
 #include <stdio.h>
-#include "prob.h"
+#include <stdlib.h>
+#include <time.h>
 #include "parse.h"
-#include "sim.h"
-#include "translate.h"
-#include "settings.h"
 #include "plotting.h"
+#include "prob.h"
+#include "settings.h"
+#include "sim.h"
+#include "xmalloc.h"
+
+
+struct Settings settings =
+{
+	.mode = ROLL,
+    .rolls = 1,
+	.cutoff = 0.000005,
+	.precision = 3,
+	.percentile = 25
+};
+
 
 int main(int argc, char **argv)
 {

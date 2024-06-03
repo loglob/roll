@@ -2,3 +2,5 @@ roll
 debug
 .vscode
 compile_flags.txt
+*.d
+*.o
