@@ -4,6 +4,7 @@
 #include "die.h"
 #include "parse.h"
 #include "pattern.h"
+#include "prob.h"
 #include "xmalloc.h"
 
 
@@ -64,6 +65,10 @@ void d_print(struct die *d)
 	{
 		case INT:
 			printf("%d", d->constant);
+		break;
+
+		case '@':
+			putchar('@');
 		break;
 
 		case 'd':
@@ -195,6 +200,10 @@ void d_printTree(struct die *d, int depth)
 			printf("%u\n", d->constant);
 		break;
 
+		case '@':
+			printf("RETRIEVE MATCH CONTEXT\n");
+		break;
+
 		case 'd':
 			if(d->unop->op == INT)
 				printf("1d%u\n", d->unop->constant);
@@ -304,7 +313,7 @@ void d_printTree(struct die *d, int depth)
 	}
 }
 
-struct prob translate(struct die *d)
+struct prob translate(struct prob *ctx, const struct die *d)
 {
 	switch(d->op)
 	{
@@ -312,105 +321,129 @@ struct prob translate(struct die *d)
 			return p_constant(d->constant);
 
 		case 'd':
-			return p_dies(translate(d->unop));
+			return p_dies(translate(ctx, d->unop));
+
+		case '@':
+		{
+			if(! ctx)
+				eprintf("Invalid die expression; '@' outside of match context\n");
+		
+			return p_dup(*ctx);
+		}
 
 		case '(':
-			return translate(d->unop);
+			return translate(ctx, d->unop);
 
 		case 'x':
-			return p_muls(translate(d->biop.l), translate(d->biop.r));
+			return p_muls(translate(ctx, d->biop.l), translate(ctx, d->biop.r));
 
 		case '*':
-			return p_cmuls(translate(d->biop.l), translate(d->biop.r));
+			return p_cmuls(translate(ctx, d->biop.l), translate(ctx, d->biop.r));
 
 		case '+':
-			return p_adds(translate(d->biop.l), translate(d->biop.r));
+			return p_adds(translate(ctx, d->biop.l), translate(ctx, d->biop.r));
 
 		case '/':
-			return p_cdivs(translate(d->biop.l), translate(d->biop.r));
+			return p_cdivs(translate(ctx, d->biop.l), translate(ctx, d->biop.r));
 
 		case '-':
-			return p_adds(translate(d->biop.l), p_negs(translate(d->biop.r)));
+			return p_adds(translate(ctx, d->biop.l), p_negs(translate(ctx, d->biop.r)));
 
 		case '^':
 		case '_':
 		case DOLLAR_UP:
-			return p_selects(translate(d->select.v), d->select.sel, d->select.of, d->op != '_', d->op == DOLLAR_UP);
+			return p_selects(translate(ctx, d->select.v), d->select.sel, d->select.of, d->op != '_', d->op == DOLLAR_UP);
 
 		case UP_BANG:
 		case UP_DOLLAR:
-			return p_selects_bust(translate(d->select.v), d->select.sel, d->select.of, d->select.bust, d->op == UP_DOLLAR);
+			return p_selects_bust(translate(ctx, d->select.v), d->select.sel, d->select.of, d->select.bust, d->op == UP_DOLLAR);
 
 		case '~':
-			return p_rerolls(translate(d->reroll.v), d->reroll.set);
+			return p_rerolls(translate(ctx, d->reroll.v), d->reroll.set);
 
 		case '\\':
-			return p_sans(translate(d->reroll.v), d->reroll.set);
+			return p_sans(translate(ctx, d->reroll.v), d->reroll.set);
 
 		case '!':
-			return p_explodes(translate(d->unop));
+			return p_explodes(translate(ctx, d->unop));
 
 		case '$':
-			return p_explode_ns(translate(d->explode.v), d->explode.rounds);
+			return p_explode_ns(translate(ctx, d->explode.v), d->explode.rounds);
 
 		case '<':
-			return p_bool(1.0 - p_leqs(translate(d->biop.r), translate(d->biop.l)));
+			return p_bool(1.0 - p_leqs(translate(ctx, d->biop.r), translate(ctx, d->biop.l)));
 		case '>':
-			return p_bool(1.0 - p_leqs(translate(d->biop.l), translate(d->biop.r)));
+			return p_bool(1.0 - p_leqs(translate(ctx, d->biop.l), translate(ctx, d->biop.r)));
 		case LT_EQ:
-			return p_bool(p_leqs(translate(d->biop.l), translate(d->biop.r)));
+			return p_bool(p_leqs(translate(ctx, d->biop.l), translate(ctx, d->biop.r)));
 		case GT_EQ:
-			return p_bool(p_leqs(translate(d->biop.r), translate(d->biop.l)));
+			return p_bool(p_leqs(translate(ctx, d->biop.r), translate(ctx, d->biop.l)));
 		case '=':
-			return p_bool(p_eqs(translate(d->biop.l), translate(d->biop.r)));
+			return p_bool(p_eqs(translate(ctx, d->biop.l), translate(ctx, d->biop.r)));
 		case NEQ:
-			return p_adds(p_constant(1), p_negs(p_bool(p_eq(translate(d->biop.l), translate(d->biop.r)))));
+			return p_adds(p_constant(1), p_negs(p_bool(p_eq(translate(ctx, d->biop.l), translate(ctx, d->biop.r)))));
 
 		case '?':
-			return p_coalesces(translate(d->biop.l), translate(d->biop.r));
+			return p_coalesces(translate(ctx, d->biop.l), translate(ctx, d->biop.r));
 
 		case ':':
-			return p_terns(translate(d->ternary.cond), translate(d->ternary.then), translate(d->ternary.otherwise));
+			return p_terns(translate(ctx, d->ternary.cond), translate(ctx, d->ternary.then), translate(ctx, d->ternary.otherwise));
 
 		case UPUP:
-			return p_maxs(translate(d->biop.l), translate(d->biop.r));
+			return p_maxs(translate(ctx, d->biop.l), translate(ctx, d->biop.r));
 
 		case __:
-			return p_mins(translate(d->biop.l), translate(d->biop.r));
+			return p_mins(translate(ctx, d->biop.l), translate(ctx, d->biop.r));
 
 		case '[':
 		{
-			struct prob running = translate(d->match.v);
-			double total = 0.0;
-			struct prob ret = {};
+			struct prob running = translate(ctx, d->match.v);
+			struct prob result = {};
 
 			for (int i = 0; i < d->match.cases; i++)
 			{
-				double hit = (1.0 - total) * pt_prob(d->match.patterns[i], &running);
+				struct patternProb pt = pt_translate(ctx, d->match.patterns[i]);
+				struct prob hit = pt_probs(pt, &running);
+				pp_free(pt);
+				
+				double pHit = p_norms(&hit);
 
-				total += hit;
-
-				if(d->match.actions && hit != 0.0)
+				if(d->match.actions && pHit > 0.0)
 				{
-					struct prob tr = translate(d->match.actions + i);
-					ret = i ? p_merges(ret, tr, hit) : p_scales(tr, hit);
+					struct prob action = translate(&hit, d->match.actions + i);
+					result = p_merges(result, action, pHit);
 				}
+				else
+					p_free(hit);
 			}
 
+			double pMiss = p_sum(running);
 			p_free(running);
 
 			if(d->match.actions)
 			{
-				if(total == 0.0)
+				if(pMiss == 1.0)
 					eprintf("Invalid pattern match; All cases are impossible\n");
 
-				return p_scales(ret, 1.0 / total);
+				return p_scales(result, 1.0 / (1.0 - pMiss));
 			}
 			else
-				return p_bool(total);
+				return p_bool(1.0 - pMiss);
 		}
 
 		default:
 			eprintf("Invalid die expression; Unknown operator %s\n", tkstr(d->op));
 	}
+}
+
+struct patternProb pt_translate(struct prob *ctx, struct pattern p)
+{
+	struct patternProb pp = { .op = p.op };
+
+	if(p.op)
+		pp.prob = translate(ctx, &p.die);
+	else
+		pp.set = p.set;
+	
+	return pp;
 }

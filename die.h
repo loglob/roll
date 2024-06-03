@@ -29,7 +29,7 @@
 #define SELECT "^_\xFA\xF6\xF5"
 #define REROLLS "~\\"
 #define UOPS SELECT REROLLS "!$d("
-#define SPECIAL BIOPS UOPS ",/():;[]"
+#define SPECIAL BIOPS UOPS "@,/():;[]"
 
 #define EXPLODE_RATIO 2
 
@@ -52,4 +52,7 @@ void d_print(struct die *d);
 void d_printTree(struct die *d, int depth);
 
 /* Transforms a dice expression to equivalent probability function. */
-struct prob translate(struct die *d);
+struct prob translate(struct prob *ctx, const struct die *d);
+
+/* Translates pattern for probability checking. */
+struct patternProb pt_translate(struct prob *ctx, struct pattern p);

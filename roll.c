@@ -66,6 +66,7 @@ int main(int argc, char **argv)
 						" A die is represented by the language:\n"
 						"	n d m  Expands to 'n x d m'.\n"
 						"	d n    Rolling a die with n sides.\n"
+						"	@      The actual result of the last successful pattern match.\n"
 						"	n      A constant value of n. n may be 0.\n"
 						"	D~F    Rerolls once if any of the given values are rolled.\n"
 						"	D\\F   Like ~ with infinite rerolls.\n"
@@ -88,6 +89,7 @@ int main(int argc, char **argv)
 						"	D$     Identical to D$1.\n"
 						"	D[pt]  Rolls on a die and checks whether the roll matches any given pattern, separated by ';'.\n"
 						"	        Each pattern may be followed by ':' and a die. That die is rolled when that pattern is hit.\n"
+						"	        That expression may use '@' to access the matched value.\n"
 						"	        If patterns don't have a die attached, returns whether any pattern matched. Otherwise, discard the roll if no patterns are hit.\n"
 						"	DxD    Rolls on the left die, then adds that many rolls of the right die.\n"
 						"	D*D    Rolls on both dice, then multiplies the results.\n"
@@ -274,7 +276,7 @@ int main(int argc, char **argv)
 				int *buf = xcalloc(settings.rolls, sizeof(int));
 
 				for (int i = 0; i < settings.rolls; i++)
-					buf[i] = sim(d);
+					buf[i] = sim(NULL, d);
 
 				printf("%u * ", settings.rolls);
 				d_print(d);
@@ -290,7 +292,7 @@ int main(int argc, char **argv)
 			case PREDICT_COMP:
 			case PREDICT_COMP_NORMAL:
 			{
-				struct prob p = translate(d);
+				struct prob p = translate(NULL, d);
 
 				d_print(d);
 				printf(":\n");
@@ -345,7 +347,7 @@ int main(int argc, char **argv)
 
 			case COMPARE:
 			{
-				struct prob p = translate(d);
+				struct prob p = translate(NULL, d);
 
 				d_print(d);
 				printf(" <=> %d:\n", settings.compareValue);

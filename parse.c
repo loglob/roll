@@ -34,6 +34,7 @@ cases := case
 ;
 
 die := n
+	| '@'
 	| 'd' die
 	| die ~ set
 	| die ~ ! set
@@ -411,8 +412,11 @@ static inline struct die *_parse_atom(ls_t *ls)
 					})
 				});
 
+		case '@':
+			return d_clone((struct die) { .op = '@' });
+
 		default:
-			badtk(INT, 'd', '(');
+			badtk(INT, '@', 'd', '(');
 			__builtin_unreachable();
 	}
 }

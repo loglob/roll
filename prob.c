@@ -111,119 +111,82 @@ static int *chooseBuf(int N)
 	return buf;
 }
 
-double pt_prob(struct pattern pt, struct prob *p)
+double pt_hit(struct patternProb pt, int v)
 {
 	if(!pt.op)
+		return set_has(pt.set, v) ? 1.0 : 0.0;
+
+	const struct prob q = P_CONST(v);
+
+	switch(pt.op)
 	{
-		double ret = p_has(*p, pt.set);
+		case GT_EQ:
+			return p_leq(pt.prob, q);
+		case '<':
+			return 1.0 - p_leq(pt.prob, q);
 
-		if(ret == 1.0)
-		{
-			p_free(*p);
-			*p = (struct prob){};
+		case LT_EQ:
+			return p_leq(q, pt.prob);
+		case '>':
+			return 1.0 - p_leq(q, pt.prob);
 
-			return 1.0;
-		}
-		else
-		{
-			*p = p_sans(*p, pt.set);
+		case '=':
+			return p_eq(q, pt.prob);
+		case NEQ:
+			return 1.0 - p_eq(q, pt.prob);
 
-			return ret;
-		}
+		default:
+			eprintf("Invalid pattern: Unknown relational operator: %s\n", tkstr(pt.op));
+			__builtin_unreachable();
 	}
-	else
+}
+
+double p_sum(struct prob p)
+{
+	double sum = 0;
+
+	for(int i = 0; i < p.len; ++i)
+		sum += p.p[i];
+
+	return sum;
+}
+
+/** The total sum of a probability function.
+	i.e. 1 is axiom (1) holds. */
+double p_norms(struct prob *p)
+{
+	double sum = p_sum(*p);
+
+	if(sum != 1.0 && sum != 0.0) 
 	{
-		struct prob q = translate(&pt.die);
-		double ret = 0.0;
-
-		switch(pt.op)
-		{
-			case '>':
-			case GT_EQ:
-			{
-				// current hit probability, i.e. p >(=) q
-				double cur = 0.0;
-
-				for (int j = q.low; j < p->low && j <= p_h(q); j++)
-					cur += q.p[j - q.low];
-				for (int i = 0; i < p->len; i++)
-				{
-					double peq = probof(q, p->low + i);
-
-					if(pt.op == GT_EQ)
-						cur += peq;
-
-					ret += cur * p->p[i];
-					p->p[i] *= (1.0 - cur);
-
-					if(pt.op != GT_EQ)
-						cur += peq;
-				}
-			}
-			break;
-
-			case '<':
-			case LT_EQ:
-			{
-				// current hit probability, i.e. p <(=) q
-				double cur = 1.0;
-
-				for (int j = q.low; j < p->low && j <= p_h(q); j++)
-					cur -= q.p[j - q.low];
-				for (int i = 0; i < p->len; i++)
-				{
-					double peq = probof(q, p->low + i);
-
-					if(pt.op != LT_EQ)
-						cur -= peq;
-
-					ret += cur * p->p[i];
-					p->p[i] *= (1.0 - cur);
-
-					if(pt.op == LT_EQ)
-						cur -= peq;
-				}
-			}
-			break;
-
-			case '=':
-			case NEQ:
-			{
-				for (int i = 0; i < p->len; i++)
-				{
-					double peq = probof(q, p->low + i);
-
-					if(pt.op == NEQ)
-						peq = 1.0 - peq;
-
-					ret += peq * p->p[i];
-					p->p[i] *= (1.0 - peq);
-				}
-			}
-			break;
-
-			default:
-				eprintf("Invalid pattern: Unknown relational operator: %s\n", tkstr(pt.op));
-				__builtin_unreachable();
-		}
-
-		if(ret == 0.0)
-		// pattern never hit
-			return 0.0;
-		else if(ret == 1.0)
-		{
-			// pattern always hit
-			p_free(*p);
-			*p = (struct prob){};
-			return 1.0;
-		}
-		else
-		{
-			*p = p_cuts(p_scales(*p, 1.0 / (1.0 - ret)), 0, 0);
-			return ret;
-		}
-
+		for(int i = 0; i < p->len; ++i)
+			p->p[i] /= sum;
 	}
+
+	return sum;
+}
+
+struct prob pt_probs(struct patternProb pt, struct prob *p)
+{
+	struct prob q = {
+		.low = p->low,
+		.len = p->len,
+		.p = malloc(p->len * sizeof(double))
+		};
+
+	for(int i = 0; i < p->len; ++i)
+	{
+		double pHit = pt_hit(pt, p->low + i);
+
+		q.p[i] = p->p[i] * pHit;
+		p->p[i] *= 1.0 - pHit;
+	}
+	
+	q = p_cuts(q, 0, 0);
+	*p = p_cuts(*p, 0, 0);
+
+	return q;
+
 }
 
 double probof(struct prob p, signed int num)
@@ -294,6 +257,13 @@ struct prob p_constant(int val)
 void p_free(struct prob p)
 {
 	free(p.p);
+}
+
+void pp_free(struct patternProb pp)
+{
+	if(pp.op)
+		p_free(pp.prob);
+	// set is aliased in AST
 }
 
 double p_has(struct prob p, struct set set)
@@ -675,6 +645,13 @@ struct prob p_cuts(struct prob p, int l, int r)
 {
 	for (; p.p[l] <= 0.0; l++)
 		;
+
+	if(l == p.len)
+	{
+		p_free(p);
+		return (struct prob){ p.low, 0, NULL };
+	}
+
 	for (; p.p[p.len - r - 1] <= 0.0; r++)
 		;
 

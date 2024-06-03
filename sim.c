@@ -26,25 +26,25 @@ static inline int roll(int pips)
 	@param x a value
 	@return whether x is matched by p
  */
-static bool pt_matches(struct pattern p, int x)
+static bool pt_matches(const int *ctx, struct pattern p, int x)
 {
 	if(p.op)
 	{
 		struct die c = (struct die){ .op = INT, .constant = x };
 		struct die d = (struct die){ .op = p.op, .biop = { .l = &c, .r = &p.die } };
 
-		return sim(&d);
+		return sim(ctx, &d);
 	}
 	else
 		return set_has(p.set, x);
 }
 
-int sim(struct die *d)
+int sim(const int *ctx, struct die *d)
 {
 	switch(d->op)
 	{
 		#define _biop(c, calc) case c: { \
-			int l = sim(d->biop.l), r = sim(d->biop.r); \
+			int l = sim(ctx, d->biop.l), r = sim(ctx, d->biop.r); \
 			int res = calc; \
 			if(settings.verbose) printf("%d %s %d = %d\n", l, tkstr(c), r, res); \
 			return res; }
@@ -70,11 +70,11 @@ int sim(struct die *d)
 
 		case '?':
 		{
-			int r1 = sim(d->biop.l);
+			int r1 = sim(ctx, d->biop.l);
 
 			if(r1 <= 0)
 			{
-				int r2 = sim(d->biop.r);
+				int r2 = sim(ctx, d->biop.r);
 
 				if(settings.verbose)
 					printf("Rolled %d after coalescing %d\n", r2, r1);
@@ -87,11 +87,11 @@ int sim(struct die *d)
 
 		case ':':
 		{
-			int r1 = sim(d->ternary.cond);
+			int r1 = sim(ctx, d->ternary.cond);
 
 			if(r1 > 0)
 			{
-				int r2 = sim(d->ternary.then);
+				int r2 = sim(ctx, d->ternary.then);
 
 				if(settings.verbose)
 					printf("Rolled %d for ternary condition resulting in %d from true branch\n", r1, r2);
@@ -100,7 +100,7 @@ int sim(struct die *d)
 			}
 			else
 			{
-				int r2 = sim(d->ternary.otherwise);
+				int r2 = sim(ctx, d->ternary.otherwise);
 
 				if(settings.verbose)
 					printf("Rolled %d for ternary condition resulting in %d from false branch\n", r1, r2);
@@ -111,7 +111,7 @@ int sim(struct die *d)
 		}
 
 		case '(':
-			return sim(d->unop);
+			return sim(ctx, d->unop);
 
 		case '^':
 		case '_':
@@ -122,7 +122,7 @@ int sim(struct die *d)
 			int *buf = xcalloc(sizeof(int), d->select.of);
 
 			for (int i = 0; i < d->select.of; i++)
-				buf[i] = sim(d->select.v);
+				buf[i] = sim(ctx, d->select.v);
 
 			qsort(buf, d->select.of, sizeof(int), intpcomp);
 			int *selected = buf + ((d->op == '_') ? 0 : (d->select.of - d->select.sel));
@@ -175,7 +175,7 @@ int sim(struct die *d)
 				int *exploded = calloc(sizeof(int), explosions);
 
 				for (int i = 0; i < explosions; i++)
-					exploded[i] = sim(d->select.v);
+					exploded[i] = sim(ctx, d->select.v);
 
 				if(settings.verbose)
 				{
@@ -195,11 +195,11 @@ int sim(struct die *d)
 
 		case '~':
 		{
-			int r1 = sim(d->reroll.v);
+			int r1 = sim(ctx, d->reroll.v);
 
 			if(set_has(d->reroll.set, r1))
 			{
-				int r2 = sim(d->reroll.v);
+				int r2 = sim(ctx, d->reroll.v);
 
 				if(settings.verbose)
 					printf("Rolled %d after discarding %d\n", r2, r1);
@@ -212,14 +212,14 @@ int sim(struct die *d)
 
 		case '\\':
 		{
-			int r = sim(d->reroll.v);
+			int r = sim(ctx, d->reroll.v);
 
 			while(set_has(d->reroll.set, r))
 			{
 				if(settings.verbose)
 					printf("Discarded %d\n", r);
 
-				r = sim(d->reroll.v);
+				r = sim(ctx, d->reroll.v);
 			}
 
 			return r;
@@ -227,7 +227,7 @@ int sim(struct die *d)
 
 		case 'd':
 		{
-			int pips = sim(d->unop);
+			int pips = sim(ctx, d->unop);
 			int r = roll(pips);
 
 			if(settings.verbose)
@@ -238,11 +238,11 @@ int sim(struct die *d)
 
 		case 'x':
 		{
-			int rolls = sim(d->biop.l);
+			int rolls = sim(ctx, d->biop.l);
 			int *buf = xcalloc(sizeof(int), rolls);
 
 			for (int i = 0; i < rolls; i++)
-				buf[i] = sim(d->biop.r);
+				buf[i] = sim(ctx, d->biop.r);
 
 			int sum = sumls(buf, rolls);
 
@@ -258,15 +258,25 @@ int sim(struct die *d)
 			return d->constant;
 		}
 
+		case '@':
+		{
+			if(! ctx)
+				eprintf("Invalid die expression; '@' outside match context");
+			if(settings.verbose)
+				printf("Retrieved from stack: %d\n", *ctx);
+	
+			return *ctx;
+		}
+
 		case '$':
 		{
 			rl_t r = d_range(d->explode.v);
-			int cur = sim(d->explode.v);
+			int cur = sim(ctx, d->explode.v);
 			int sum = cur;
 			int i;
 
 			for (i = 0; i < d->explode.rounds && cur == r.high; i++)
-				sum += cur = sim(d->explode.v);
+				sum += cur = sim(ctx, d->explode.v);
 
 			if(i > 0 && settings.verbose)
 				printf("Rolled a %d which exploded %d times to %d\n", r.high, i, sum);
@@ -277,11 +287,11 @@ int sim(struct die *d)
 		case '!':
 		{
 			rl_t r = d_range(d->unop);
-			int r1 = sim(d->unop);
+			int r1 = sim(ctx, d->unop);
 
 			if(r1 == r.high)
 			{
-				int r2 = sim(d->unop);
+				int r2 = sim(ctx, d->unop);
 
 				if(settings.verbose)
 					printf("Rolled a %d which exploded to %d\n", r1, r1 + r2);
@@ -290,7 +300,7 @@ int sim(struct die *d)
 			}
 			else if(r1 == r.low)
 			{
-				int r2 = sim(d->unop);
+				int r2 = sim(ctx, d->unop);
 
 				if(settings.verbose)
 					printf("Rolled a %d which imploded to %d\n", r1, r1 - r2);
@@ -305,11 +315,11 @@ int sim(struct die *d)
 		{
 			while(true)
 			{
-				int r = sim(d->match.v);
+				int r = sim(ctx, d->match.v);
 
 				for (int i = 0; i < d->match.cases; i++)
 				{
-					if(pt_matches(d->match.patterns[i], r))
+					if(pt_matches(ctx, d->match.patterns[i], r))
 					{
 						if(settings.verbose)
 						{
@@ -319,7 +329,7 @@ int sim(struct die *d)
 						}
 
 						if(d->match.actions)
-							return sim(d->match.actions + i);
+							return sim(&r, d->match.actions + i);
 						else
 							return true;
 					}

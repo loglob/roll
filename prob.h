@@ -23,8 +23,20 @@ struct prob
 	double *p;
 };
 
+struct patternProb
+{
+	char op;
+	union
+	{
+		struct set set;
+		struct prob prob;
+	};
+};
+
 /* Frees a probability function. */
 void p_free(struct prob p);
+
+void pp_free(struct patternProb pp);
 
 /** The probability of a result in p
 	@param p A probability function
@@ -33,12 +45,17 @@ void p_free(struct prob p);
 */
 double probof(struct prob p, signed int num);
 
-/** Determines how likely a probability function will hit a pattern. (!) May return an empty probability function
+
+/** Partitions a probability function by a pattern.
+Determines how likely a probability function will hit a pattern. (!) May return an empty probability function
 	@param pt the pattern
-	@param p the input probability distribution. Overwritten with the distribution of fallthrough values.
-	@returns The overall percentage with which the pattern is hit
+	@param p the input probability distribution. Overwritten with the probability of misses, which does NOT fulfill axiom (1).
+	@returns The distribution of hits. Does NOT fulfill axiom (1).
  */
-double pt_prob(struct pattern pt, struct prob *p);
+struct prob pt_probs(struct patternProb pt, struct prob *p);
+
+/** Determines the probability of a pattern capturing a value */
+double pt_hit(struct patternProb pt, int v);
 
 /* Creates a uniform distribution of the range 1..n (inclusive), or n..-1 if n < 0. */
 struct prob p_uniform(int n);
@@ -152,3 +169,11 @@ struct prob p_mins(struct prob l, struct prob r);
 
 /* Emulates rolling on p, then rolling a fair die with that many pips */
 struct prob p_dies(struct prob p);
+
+/** Scales a probability function to fulfill axiom (1).
+	@returns The sum of probabilities in p.
+		1 if axiom (1) was already fulfilled.
+ */
+double p_norms(struct prob *p);
+
+double p_sum(struct prob p);
