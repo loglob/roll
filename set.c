@@ -160,9 +160,6 @@ void set_free(struct Set set)
 
 bool set_hasAll(struct Set s, signed int start, signed int end)
 {
-	if(s.negated)
-		return !set_hasAny((struct Set){ s.entries, s.length, false }, start, end);
-
 	struct Range *hit = _set_find(s.length, s.entries, start, NULL, NULL);
 
 	return hit && (end <= hit->end || hit == _set_find(s.length, s.entries, end, NULL, NULL));
@@ -170,9 +167,6 @@ bool set_hasAll(struct Set s, signed int start, signed int end)
 
 bool set_hasAny(struct Set s, signed int start, signed int end)
 {
-	if(s.negated)
-		return !set_hasAll((struct Set){ s.entries, s.length, false }, start, end);
-
 	struct Range *lo = NULL, *hi = NULL;
 
 	if(_set_find(s.length, s.entries, start, &lo, NULL) || _set_find(s.length, s.entries, end, NULL, &hi))
@@ -199,9 +193,6 @@ bool set_empty(struct Set set)
 
 void set_print(struct Set s)
 {
-	if(s.negated)
-		putchar('!');
-
 	for (size_t i = 0; i < s.length; i++)
 	{
 		if(i)

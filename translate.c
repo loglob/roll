@@ -3,7 +3,7 @@
 #include "prob.h"
 #include "util.h"
 
-struct Prob translate(struct Prob *ctx, const struct Die *d)
+struct Prob translate(const struct Prob *ctx, const struct Die *d)
 {
 	switch(d->op)
 	{
@@ -134,7 +134,7 @@ struct Prob translate(struct Prob *ctx, const struct Die *d)
 	}
 }
 
-struct PatternProb pt_translate(struct Prob *ctx, struct Pattern p)
+struct PatternProb pt_translate(const struct Prob *ctx, struct Pattern p)
 {
 	struct PatternProb pp = { .op = p.op };
 

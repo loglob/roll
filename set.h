@@ -29,14 +29,10 @@ struct Set
 	struct Range *entries;
 	/** The amount of segments in the entries array. */
 	size_t length;
-	/** Whether the set is negated */
-	bool negated;
 };
-
 
 #define set_has(set, key) set_hasAll(set, key, key)
 #define SINGLETON(s,e) (struct Set){ (struct Range[1]){ { s,e } }, 1, false }
-
 
 /** Frees a set's contents. */
 void set_free(struct Set set);

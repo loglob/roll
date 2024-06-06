@@ -47,7 +47,7 @@ void pt_free(struct Pattern p)
 	if(p.op)
 		d_free(p.die);
 	else
-		set_free(p.set);
+		set_free(p.set.entries);
 }
 
 void pt_print(struct Pattern p)
@@ -58,7 +58,7 @@ void pt_print(struct Pattern p)
 		d_print(&p.die);
 	}
 	else
-		set_print(p.set);
+		set_print(p.set.entries);
 }
 
 void d_print(struct Die *d)

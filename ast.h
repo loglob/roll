@@ -99,8 +99,16 @@ struct Pattern
 	char op;
 	union
 	{
-		/** A set to match against. Valid if op is 0 */
-		struct Set set;
+		/** Valid if op is 0 */
+		struct SetPattern
+		{
+			/** Values to match against */
+			struct Set entries;
+			/** Whether this filter is negated */
+			bool negated;
+			/** Whether the special ranges `_` or `^` are included */
+			bool hasMin, hasMax;
+		} set;
 		/** A die to compare against, if op is in RELOPS */
 		struct Die die;
 	};

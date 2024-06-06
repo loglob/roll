@@ -1,6 +1,7 @@
 /* represents probability functions that map N onto Q, with the sum of every value equaling 1.
 	any function ending on 's' acts in-place or frees its arguments after use. */
 #pragma once
+#include "ast.h"
 #include "set.h"
 #include <stdbool.h>
 
@@ -31,7 +32,7 @@ struct PatternProb
 	union
 	{
 		/** Valid if op is 0 */
-		struct Set set;
+		struct SetPattern set;
 		/** Valid if op isn't 0 */
 		struct Prob prob;
 	};
@@ -57,8 +58,10 @@ Determines how likely a probability function will hit a pattern. (!) May return 
  */
 struct Prob pt_probs(struct PatternProb pt, struct Prob *p);
 
-/** Determines the probability of a pattern capturing a value */
-double pt_hit(struct PatternProb pt, int v) PURE;
+/** Determines the probability of a pattern capturing a value
+	@param p The probability function that `v` was picked from
+*/
+double pt_hit(struct PatternProb pt, const struct Prob *p, int v) PURE;
 
 /* Creates a uniform distribution of the range 1..n (inclusive), or n..-1 if n < 0. */
 struct Prob p_uniform(int n) PURE;

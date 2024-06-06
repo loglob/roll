@@ -23,10 +23,12 @@ static inline int roll(int pips)
 
 /** Checks whether a pattern matches an integer. May evaluate dice.
 	@param p a pattern
+	@param d the die that produced `x`
 	@param x a value
+	@param pBuf buffer that caches translation of `d`
 	@return whether x is matched by p
  */
-static bool pt_matches(const int *ctx, struct Pattern p, int x)
+static bool pt_matches(const int *ctx, struct Pattern p, const struct Die *d, int x, struct Prob *pBuf)
 {
 	if(p.op)
 	{
@@ -36,7 +38,22 @@ static bool pt_matches(const int *ctx, struct Pattern p, int x)
 		return sim(ctx, &d);
 	}
 	else
-		return set_has(p.set, x);
+	{
+		bool hit = set_has(p.set.entries, x);
+
+		if(!hit && (p.set.hasMin || p.set.hasMax))
+		{
+			if(!pBuf->p)
+			{
+				struct Prob c = P_CONST(ctx ? *ctx : 0);
+				*pBuf = translate(ctx ? &c : NULL, d);
+			}
+
+			hit = (p.set.hasMin && pBuf->low == x) || (p.set.hasMax && p_h(*pBuf) == x);
+		}
+
+		return p.set.negated ? !hit : hit;
+	}
 }
 
 struct Range d_limits(const int *ctx, const struct Die *d)
@@ -211,13 +228,18 @@ int sim(const int *ctx, struct Die *d)
 		case '~':
 		{
 			int r1 = sim(ctx, d->reroll.v);
+			struct Prob buf = {};
+			bool match = pt_matches(ctx, *d->reroll.pat, d->reroll.v, r1, &buf);
+			p_free(buf);
 
-			if(pt_matches(ctx, *d->reroll.pat, r1))
+			if(match)
 			{
 				int r2 = sim(ctx, d->reroll.v);
 
 				if(settings.verbose)
 					printf("Rolled %d after discarding %d\n", r2, r1);
+
+
 
 				return r2;
 			}
@@ -228,8 +250,9 @@ int sim(const int *ctx, struct Die *d)
 		case '\\':
 		{
 			int r = sim(ctx, d->reroll.v);
+			struct Prob buf = {};
 
-			while(pt_matches(ctx, *d->reroll.pat, r))
+			while(pt_matches(ctx, *d->reroll.pat, d->reroll.v, r, &buf))
 			{
 				if(settings.verbose)
 					printf("Discarded %d\n", r);
@@ -237,6 +260,7 @@ int sim(const int *ctx, struct Die *d)
 				r = sim(ctx, d->reroll.v);
 			}
 
+			p_free(buf);
 			return r;
 		}
 
@@ -328,13 +352,15 @@ int sim(const int *ctx, struct Die *d)
 
 		case '[':
 		{
+			struct Prob buf = {};
+
 			while(true)
 			{
 				int r = sim(ctx, d->match.v);
 
 				for (int i = 0; i < d->match.cases; i++)
 				{
-					if(pt_matches(ctx, d->match.patterns[i], r))
+					if(pt_matches(ctx, d->match.patterns[i], d->match.v, r, &buf))
 					{
 						if(settings.verbose)
 						{
@@ -342,6 +368,8 @@ int sim(const int *ctx, struct Die *d)
 							pt_print(d->match.patterns[i]);
 							putchar('\n');
 						}
+
+						p_free(buf);
 
 						if(d->match.actions)
 							return sim(&r, d->match.actions + i);
@@ -351,7 +379,10 @@ int sim(const int *ctx, struct Die *d)
 				}
 
 				if(! d->match.actions)
+				{
+					p_free(buf);
 					return false;
+				}
 			}
 		}
 

@@ -459,12 +459,29 @@ static inline bool _parse_lim(ls_t *ls, int *res)
 	}
 }
 
-static struct Set _parse_set(ls_t *ls)
+static struct SetPattern _parse_setPat(ls_t *ls)
 {
-	struct Set set = { .negated = lexm('!') };
+	struct SetPattern sp = { .negated = lexm('!') };
 
 	do
 	{
+		if(lexm('^'))
+		{
+			if(sp.hasMax)
+				errf("Duplicate '^' entry in set");
+
+			sp.hasMax = true;
+			continue;
+		}
+		if(lexm('_'))
+		{
+			if(sp.hasMin)
+				errf("Duplicate '^' entry in set");
+
+			sp.hasMin = true;
+			continue;
+		}
+		
 		int left;
 		int leftFin = _parse_lim(ls, &left);
 
@@ -476,15 +493,15 @@ static struct Set _parse_set(ls_t *ls)
 			if(leftFin && rightFin && left > right)
 				errf("Invalid range specifier, ranges must be ordered");
 
-			set_insert(&set, leftFin ? left : INT_MIN, rightFin ? right : INT_MAX);
+			set_insert(&sp.entries, leftFin ? left : INT_MIN, rightFin ? right : INT_MAX);
 		}
 		else if(leftFin)
-			set_insert(&set, left, left);
+			set_insert(&sp.entries, left, left);
 		else
-			set_insert(&set, INT_MIN, INT_MAX);
+			set_insert(&sp.entries, INT_MIN, INT_MAX);
 	} while(lexm(','));
 
-	return set;
+	return sp;
 }
 
 /** Parses a pattern specifier */
@@ -504,7 +521,7 @@ static inline struct Pattern _parse_pattern(ls_t *ls)
 	else
 	{
 		unlex();
-		return (struct Pattern){ .op = 0, .set = _parse_set(ls) };
+		return (struct Pattern){ .op = 0, .set = _parse_setPat(ls) };
 	}
 }
 

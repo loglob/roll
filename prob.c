@@ -107,10 +107,17 @@ static int *chooseBuf(int N)
 	return buf;
 }
 
-double pt_hit(struct PatternProb pt, int v)
+double pt_hit(struct PatternProb pt, const struct Prob *p, int v)
 {
 	if(!pt.op)
-		return set_has(pt.set, v) ? 1.0 : 0.0;
+	{
+		bool hit = set_has(pt.set.entries, v);
+
+		if(!hit && (pt.set.hasMin || pt.set.hasMax))
+			hit = (pt.set.hasMin && (v == p->low)) || (pt.set.hasMax && (v == p_h(*p)));
+		
+		return (pt.set.negated ? !hit : hit) ? 1.0 : 0.0;
+	}
 
 	const struct Prob q = P_CONST(v);
 
@@ -172,7 +179,7 @@ struct Prob pt_probs(struct PatternProb pt, struct Prob *p)
 
 	for(int i = 0; i < p->len; ++i)
 	{
-		double pHit = pt_hit(pt, p->low + i);
+		double pHit = pt_hit(pt, p, p->low + i);
 
 		q.p[i] = p->p[i] * pHit;
 		p->p[i] *= 1.0 - pHit;
@@ -694,7 +701,7 @@ struct Prob p_selects_bust(struct Prob p, int sel, int of, int bust, bool explod
 	int *const choose = chooseBuf(of);
 	const double p1 = *p.p;
 	// p without 1s
-	const struct PatternProb lowPt = { .op = 0, .set = SINGLETON(p.low, p.low) };
+	const struct PatternProb lowPt = { .op = 0, .set = { .hasMin = true }};
 	const struct Prob p2 = p_sans(p, lowPt);
 
 	// range over # of 1s
