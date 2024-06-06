@@ -260,7 +260,7 @@ int sim(const int *ctx, struct die *d)
 		case 'x':
 		{
 			int rolls = sim(ctx, d->biop.l);
-			int *buf = xcalloc(sizeof(int), rolls);
+			int *buf = xcalloc(rolls, sizeof(int));
 
 			for (int i = 0; i < rolls; i++)
 				buf[i] = sim(ctx, d->biop.r);
