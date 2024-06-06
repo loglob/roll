@@ -1,16 +1,14 @@
 /* represents probability functions that map N onto Q, with the sum of every value equaling 1.
 	any function ending on 's' acts in-place or frees its arguments after use. */
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include "die.h"
 #include "parse.h"
-#include "pattern.h"
 #include "prob.h"
-#include "ranges.h"
 #include "set.h"
-#include "settings.h"
 #include "util.h"
 #include "xmalloc.h"
 
@@ -360,27 +358,136 @@ struct prob p_add(struct prob l, struct prob r)
 
 CLEAN_BIOP(struct prob, p_add)
 
+/** @return The smallest negative (farthest to 0) possible value in p */
+static inline signed int negMin(struct prob p)
+{
+	return p.low >= 0 ? 0 : p.low;
+}
+
+/** @return The largest negative (closest to 0) possible value in p */
+static inline signed int negMax(struct prob p)
+{
+	int h = p_h(p);
+
+	if(h < 0)
+		return h;
+
+	if(p.low >= 0)
+		return 0;
+
+	for(int i = -1; i > p.low; --i)
+	{
+		if(probof(p, i) > 0)
+			return i;
+	}
+
+	return p.low;
+}
+
+/** @return The smallest positive (closest to 0) possible value in p */
+static inline signed int posMin(struct prob p)
+{
+	if(p.low > 0)
+		return p.low;
+	
+	int h = p_h(p);
+
+	if(h <= 0)
+		return 0;
+
+	for(int i = 1; i < h; ++i)
+	{
+		if(probof(p, i) > 0)
+			return i;
+	}
+
+	return h;
+}
+
+/** @return The largest positive (farthest from 0) possible value in p */
+static inline signed int posMax(struct prob p)
+{
+	int h = p_h(p);
+	return h <= 0 ? 0 : h;
+}
+
 struct prob p_cmul(struct prob l, struct prob r)
 {
-	rl_t res = range_mul(range_lim(l.low, p_h(l)), range_lim(r.low, p_h(r)));
-	double *p = xcalloc(res.len, sizeof(double));
+	bool lZ = probof(l, 0) > 0, rZ = probof(r, 0) > 0;
+	int lNL = negMin(l), lNH = negMax(l), lPL = posMin(l), lPH = posMax(l);
+	int rNL = negMin(r), rNH = negMax(r), rPL = posMin(r), rPH = posMax(r);
+
+	assert(lZ || lNL || lPH);
+	assert(rZ || rNL || rPH);
+
+	int lo = min(lNL * rPH, lPH * rNL);
+
+	if(lo == 0) // must be positive
+		lo = min(lPL * rPL, lNH * rNH);
+	
+	int hi = max(lPH * rPH, lNL * rNL);
+
+	if(hi == 0 && !lZ && !rZ) // must be negative
+	{
+		int x = lNH * rPL, y = lPL * rNH;
+
+		if(x && y)
+			hi = max(x, y);
+		else if(x)
+			hi = x;
+		else
+			hi = y;
+	}
+
+	assert(hi >= lo);
+	int len = hi - lo + 1;
+	
+	double *p = xcalloc(len, sizeof(double));
 
 	for (int i = 0; i < l.len; i++)
 		for (int j = 0; j < r.len; j++)
-			p[(i + l.low) * (j + r.low) - res.low] += l.p[i] * r.p[j];
+			p[(i + l.low) * (j + r.low) - lo] += l.p[i] * r.p[j];
 
-	return (struct prob){ .low = res.low, .len = res.len, .p = p };
+	return (struct prob){ .low = lo, .len = len, .p = p };
 }
 
 CLEAN_BIOP(struct prob, p_cmul)
 
 struct prob p_cdiv(struct prob l, struct prob r)
 {
-	if(r.len == 1 && r.low == 0)
+	bool lZ = probof(l, 0) > 0;
+	int lNL = negMin(l), lNH = negMax(l), lPL = posMin(l), lPH = posMax(l);
+	int rNL = negMin(r), rNH = negMax(r), rPL = posMin(r), rPH = posMax(r);
+
+	assert(lZ || lNL || lPH);
+	
+	if(!rNL && !rPH)
 		eprintf("Division by constant 0.\n");
 
-	rl_t res = range_div(range_lim(l.low, p_h(l)), range_lim(r.low, p_h(r)));
-	int len = res.high - res.low + 1;
+	int lo = lZ ? 0 : INT_MAX;
+
+	if(rPL)
+		lo = min(lo, lNL / rPL);
+	if(rNH)
+		lo = min(lo, lPH / rNH);
+	if(rPH)
+		lo = min(lo, lPL / rPH);
+	if(rNL)
+		lo = min(lo, lNH / rNL);
+
+	int hi = lZ ? 0 : INT_MIN;
+
+	if(rPL)
+		hi = max(hi, lPH / rPL);
+	if(rNH)
+		hi = max(hi, lNL / rNH);
+	if(rPH)
+		hi = max(hi, lNH / rPH);
+	if(rNL)
+		hi = max(hi, lPL / rNL);
+
+	assert(lo <= hi);
+	int len = hi - lo + 1;
 
 	double *p = xcalloc(len, sizeof(double));
 	double discarded = 0;
@@ -388,9 +495,16 @@ struct prob p_cdiv(struct prob l, struct prob r)
 	for (int ri = 0; ri < r.len; ri++)
 	{
 		if(ri + r.low == 0)
-			discarded = r.p[ri];
+			discarded += r.p[ri];
 		else for (int li = 0; li < l.len; li++)
-			p[(li + l.low) / (ri + r.low) - res.low] += l.p[li] * r.p[ri];
+		{
+			int res = (li + l.low)/(ri + r.low);
+
+			assert(res >= lo);
+			assert(res <= hi);
+
+			p[res - lo] += l.p[li] * r.p[ri];
+		}
 	}
 
 	// Restore axiom (1)
@@ -400,7 +514,7 @@ struct prob p_cdiv(struct prob l, struct prob r)
 			p[i] /= 1.0 - discarded;
 	}
 
-	return (struct prob){ .low = res.low, .len = len, .p = p };
+	return (struct prob){ .low = lo, .len = len, .p = p };
 }
 
 CLEAN_BIOP(struct prob, p_cdiv)

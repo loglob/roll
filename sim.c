@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "die.h"
 #include "parse.h"
 #include "pattern.h"
-#include "ranges.h"
+#include "prob.h"
 #include "settings.h"
 #include "sim.h"
 #include "xmalloc.h"
@@ -37,6 +38,22 @@ static bool pt_matches(const int *ctx, struct pattern p, int x)
 	}
 	else
 		return set_has(p.set, x);
+}
+
+struct minMax
+{
+	int min, max;
+};
+
+struct minMax d_limits(const int *ctx, const struct die *d)
+{
+	struct prob c = P_CONST(ctx ? *ctx : -1);
+	struct prob p = translate(ctx ? &c : NULL, d);
+	p_free(p);
+
+	return (struct minMax) {
+		p.low, p_h(p)
+	};
 }
 
 int sim(const int *ctx, struct die *d)
@@ -119,7 +136,7 @@ int sim(const int *ctx, struct die *d)
 		case UP_DOLLAR:
 		case DOLLAR_UP:
 		{
-			int *buf = xcalloc(sizeof(int), d->select.of);
+			int *buf = xcalloc(d->select.of, sizeof(int));
 
 			for (int i = 0; i < d->select.of; i++)
 				buf[i] = sim(ctx, d->select.v);
@@ -127,14 +144,18 @@ int sim(const int *ctx, struct die *d)
 			qsort(buf, d->select.of, sizeof(int), intpcomp);
 			int *selected = buf + ((d->op == '_') ? 0 : (d->select.of - d->select.sel));
 			int sum = sumls(selected, d->select.sel);
-			rl_t lim;
+
+			// the minimum and maximum possible values of `d->select.v`
+			struct minMax vLimits;
+
+			if(d->op == UP_BANG || d->op == UP_DOLLAR || d->op == DOLLAR_UP)
+				vLimits = d_limits(ctx, d->select.v);
 
 			if(d->op == UP_BANG || d->op == UP_DOLLAR)
-			{
-				lim = d_range(d->select.v);
+			{	
 				for (int i = 0; i < d->select.bust; i++)
 				{
-					if(buf[i] != lim.low)
+					if(buf[i] != vLimits.min)
 						goto not_bust;
 				}
 
@@ -145,7 +166,7 @@ int sim(const int *ctx, struct die *d)
 					printf(" and went bust\n");
 				}
 
-				sum = lim.low - 1;
+				sum = vLimits.min - 1;
 				goto bust;
 			}
 
@@ -164,7 +185,7 @@ int sim(const int *ctx, struct die *d)
 			{
 				int n_max = 0;
 
-				for (int i = d->select.of; --i && buf[i] == lim.high;)
+				for (int i = d->select.of; --i && buf[i] == vLimits.max;)
 					n_max++;
 
 				int explosions = n_max/EXPLODE_RATIO;
@@ -172,7 +193,7 @@ int sim(const int *ctx, struct die *d)
 				if(explosions <= 0)
 					goto bust;
 
-				int *exploded = calloc(sizeof(int), explosions);
+				int *exploded = xcalloc(explosions, sizeof(int));
 
 				for (int i = 0; i < explosions; i++)
 					exploded[i] = sim(ctx, d->select.v);
@@ -270,26 +291,26 @@ int sim(const int *ctx, struct die *d)
 
 		case '$':
 		{
-			rl_t r = d_range(d->explode.v);
+			struct minMax lim = d_limits(ctx, d->explode.v);
 			int cur = sim(ctx, d->explode.v);
 			int sum = cur;
 			int i;
 
-			for (i = 0; i < d->explode.rounds && cur == r.high; i++)
+			for (i = 0; i < d->explode.rounds && cur == lim.max; i++)
 				sum += cur = sim(ctx, d->explode.v);
 
 			if(i > 0 && settings.verbose)
-				printf("Rolled a %d which exploded %d times to %d\n", r.high, i, sum);
+				printf("Rolled a %d which exploded %d times to %d\n", lim.max, i, sum);
 
 			return sum;
 		}
 
 		case '!':
 		{
-			rl_t r = d_range(d->unop);
+			struct minMax lim = d_limits(ctx, d->unop);
 			int r1 = sim(ctx, d->unop);
 
-			if(r1 == r.high)
+			if(r1 == lim.max)
 			{
 				int r2 = sim(ctx, d->unop);
 
@@ -298,7 +319,7 @@ int sim(const int *ctx, struct die *d)
 
 				return r1 + r2;
 			}
-			else if(r1 == r.low)
+			else if(r1 == lim.min)
 			{
 				int r2 = sim(ctx, d->unop);
 

@@ -62,6 +62,10 @@ die := n
 	| ( die )
 ;
 */
+#include "ast.h"
+#include "die.h"
+#include "util.h"
+#include "xmalloc.h"
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -71,12 +75,6 @@ die := n
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ast.h"
-#include "die.h"
-#include "pattern.h"
-#include "ranges.h"
-#include "util.h"
-#include "xmalloc.h"
 
 
 static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=", "/=", "^$", "$^" };
@@ -421,58 +419,77 @@ static inline struct die *_parse_atom(ls_t *ls)
 	}
 }
 
-/** Parses a range limit in a set filter */
-static inline int _parse_lim(rl_t rng, ls_t *ls)
+/** Parses a range limit in a set filter
+	@param res Stores the finite limit, on true
+	@return Whether a finite limit was given
+*/
+static inline bool _parse_lim(ls_t *ls, int *res)
 {
-	int sgn = lexm('-') ? -1 : 1;
-
 	switch(lex())
 	{
-		case '^':
-			return sgn * rng.high;
+		case '*':
+			return false;
 
-		case '_':
-			return sgn * rng.low;
+		case '-':
+		switch(lex())
+		{
+			case INT:
+				*res = -ls->num;
+				return true;
+
+			case ZERO:
+				*res = 0;
+				return true;
+
+			default:
+				badtk(INT, ZERO);
+				__builtin_unreachable();
+		}
 
 		case INT:
-			return sgn * ls->num;
+			*res = ls->num;
+			return true;
 
 		case ZERO:
-			return 0;
+			*res = 0;
+			return true;
 
 		default:
-			badtk('^', '_', '-', INT, ZERO);
+			badtk(INT, ZERO, '*', '-');
 			__builtin_unreachable();
 	}
 }
 
-static struct set _parse_set(rl_t rng, ls_t *ls)
+static struct set _parse_set(ls_t *ls)
 {
 	struct set set = { .negated = lexm('!') };
 
 	do
 	{
-		int start = _parse_lim(rng, ls);
+		int left;
+		int leftFin = _parse_lim(ls, &left);
 
 		if(lexm('-'))
 		{
-			int end = _parse_lim(rng, ls);
+			int right;
+			bool rightFin = _parse_lim(ls, &right);
 
-			if(start > end)
+			if(leftFin && rightFin && left > right)
 				errf("Invalid range specifier, ranges must be ordered");
 
-			set_insert(&set, start, end);
+			set_insert(&set, leftFin ? left : INT_MIN, rightFin ? right : INT_MAX);
 		}
+		else if(leftFin)
+			set_insert(&set, left, left);
 		else
-			set_insert(&set, start, start);
-
+			set_insert(&set, INT_MIN, INT_MAX);
 	} while(lexm(','));
 
 	return set;
 }
 
 /** Parses a pattern specifier */
-static inline struct pattern _parse_pattern(rl_t rng, ls_t *ls)
+static inline struct pattern _parse_pattern(ls_t *ls)
 {
 	char c = lex();
 
@@ -488,7 +505,7 @@ static inline struct pattern _parse_pattern(rl_t rng, ls_t *ls)
 	else
 	{
 		unlex();
-		return (struct pattern){ .op = 0, .set = _parse_set(rng, ls) };
+		return (struct pattern){ .op = 0, .set = _parse_set(ls) };
 	}
 }
 
@@ -499,7 +516,7 @@ static inline struct pattern _parse_pattern(rl_t rng, ls_t *ls)
 	@param ls lexer state
 	@returns Amount of cases read
 */
-int _parse_matches(rl_t rng, struct pattern **_patterns, struct die **_actions, ls_t *ls)
+int _parse_matches(struct pattern **_patterns, struct die **_actions, ls_t *ls)
 {
 	int count = 0;
 
@@ -523,7 +540,7 @@ int _parse_matches(rl_t rng, struct pattern **_patterns, struct die **_actions, 
 				actions = xrealloc(actions, sizeof(struct die) * capacity);
 		}
 
-		patterns[count] = _parse_pattern(rng, ls);
+		patterns[count] = _parse_pattern(ls);
 
 		if(!count && lexm(':'))
 		{
@@ -612,14 +629,14 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 
 			case '\\':
 			case '~':
-				left = d_clone((struct die){ .op = op, .reroll = { .v = left, .set = _parse_set(d_range(left), ls) } });
+				left = d_clone((struct die){ .op = op, .reroll = { .v = left, .set = _parse_set(ls) } });
 			continue;
 
 			case '[':
 			{
 				struct die *d = d_clone((struct die){ .op = '[', .match =  { .v = left } });
 
-				d->match.cases = _parse_matches(d_range(left), &d->match.patterns, &d->match.actions, ls);
+				d->match.cases = _parse_matches(&d->match.patterns, &d->match.actions, ls);
 
 				left = d;
 			}
