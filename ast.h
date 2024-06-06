@@ -106,6 +106,9 @@ struct Pattern
 	};
 };
 
+/** The ratio of crits needed to explode */
+#define EXPLODE_RATIO 2
+
 CLONE_SIG(d_clone, struct Die);
 
 /** Frees all resources used by a die expression. */

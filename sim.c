@@ -1,4 +1,4 @@
-#include "die.h"
+#include "translate.h"
 #include "parse.h"
 #include "prob.h"
 #include "settings.h"

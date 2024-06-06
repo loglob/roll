@@ -1,10 +1,10 @@
 #define _POSIX_C_SOURCE 200809L
-#include "die.h"
 #include "parse.h"
 #include "plotting.h"
 #include "prob.h"
 #include "settings.h"
 #include "sim.h"
+#include "translate.h"
 #include "util.h"
 #include <math.h>
 #include <stdio.h>

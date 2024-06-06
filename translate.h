@@ -1,10 +1,8 @@
-// die.h: Defines the die struct and type.
+// translate.h: Contains routines for translating syntax trees into probability functions
 #pragma once
 #include "ast.h"
 #include "prob.h"
 #include <stdbool.h>
-
-#define EXPLODE_RATIO 2
 
 /* Transforms a dice expression to equivalent probability function. */
 struct Prob translate(struct Prob *ctx, const struct Die *d);
