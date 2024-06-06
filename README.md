@@ -31,5 +31,5 @@ Note that `!` is a reserved character in bash and you'll have to quote the die s
 `roll '5x(d6>4)'` rolls a pool of 5 d6 and checks how many exceed a 4.
 Again, note that `>` and `()` are reserved characters.
 
-`roll -p '(d20~1^2+4+3)[^:2;15-^:1]x(d8+3d6)+4'`
+`roll -p '(d20~1^2+4+3)[^:2;15-*:1]x(d8+3d6)+4'`
 Expected damage of a level 5 halfling rogue with advantage and +4 dex attacking with a light crossbow against a target with 15AC, assuming a hit.
