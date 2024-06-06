@@ -56,7 +56,7 @@ struct Die
 			/** The die to roll on */
 			struct Die *v;
 			/** The results to reroll */
-			struct Set set;
+			struct Pattern *pat;
 		} reroll;
 		// valid if op is '$'
 		struct { struct Die *v; int rounds; } explode;
@@ -110,6 +110,7 @@ struct Pattern
 #define EXPLODE_RATIO 2
 
 CLONE_SIG(d_clone, struct Die);
+CLONE_SIG(pt_clone, struct Pattern)
 
 /** Frees all resources used by a die expression. */
 void d_free(struct Die die);

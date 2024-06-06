@@ -212,7 +212,7 @@ int sim(const int *ctx, struct Die *d)
 		{
 			int r1 = sim(ctx, d->reroll.v);
 
-			if(set_has(d->reroll.set, r1))
+			if(pt_matches(ctx, *d->reroll.pat, r1))
 			{
 				int r2 = sim(ctx, d->reroll.v);
 
@@ -229,7 +229,7 @@ int sim(const int *ctx, struct Die *d)
 		{
 			int r = sim(ctx, d->reroll.v);
 
-			while(set_has(d->reroll.set, r))
+			while(pt_matches(ctx, *d->reroll.pat, r))
 			{
 				if(settings.verbose)
 					printf("Discarded %d\n", r);

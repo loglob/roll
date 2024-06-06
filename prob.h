@@ -76,10 +76,10 @@ struct Prob p_constant(int val);
 double p_has(struct Prob p, struct Set set) PURE;
 
 /** Emulates rolling on p and rerolling once if the value is in the given signed set. In-place. */
-struct Prob p_rerolls(struct Prob p, struct Set set);
+struct Prob p_rerolls(struct Prob p, struct PatternProb pat);
 
 /** Like p_rerolls, with unlimited rerolls. */
-struct Prob p_sans(struct Prob p, struct Set set);
+struct Prob p_sans(struct Prob p, struct PatternProb pat);
 
 /** Emulates rolling on l and r, then adding the results. */
 struct Prob p_add(struct Prob l, struct Prob r);

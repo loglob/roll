@@ -5,6 +5,7 @@
 #include <string.h>
 
 CLONE(d_clone, struct Die)
+CLONE(pt_clone, struct Pattern)
 FREE_P(d_free, struct Die)
 FREE_P(pt_free, struct Pattern)
 
@@ -20,7 +21,7 @@ void d_free(struct Die d)
 	else if(strchr(REROLLS, d.op))
 	{
 		d_freeP(d.reroll.v);
-		set_free(d.reroll.set);
+		pt_freeP(d.reroll.pat);
 	}
 	else if(strchr(UOPS, d.op))
 		d_freeP(d.unop);
@@ -138,7 +139,7 @@ void d_print(struct Die *d)
 		case '\\':
 			d_print(d->select.v);
 			printf(" %c", d->op);
-			set_print(d->reroll.set);
+			pt_print(*d->reroll.pat);
 		break;
 
 		case ':':
@@ -302,7 +303,7 @@ void d_printTree(struct Die *d, int depth)
 		case '~':
 			printf("REROLL ANY OF ");
 		print_rerolls:
-			set_print(d->reroll.set);
+			pt_print(*d->reroll.pat);
 			putchar('\n');
 			d_printTree(d->select.v, depth + 1);
 		break;

@@ -178,6 +178,7 @@ struct Prob pt_probs(struct PatternProb pt, struct Prob *p)
 		p->p[i] *= 1.0 - pHit;
 	}
 	
+	// restore axioms (2) & (3)
 	q = p_cuts(q, 0, 0);
 	*p = p_cuts(*p, 0, 0);
 
@@ -280,57 +281,25 @@ double p_has(struct Prob p, struct Set set)
 	return prr;
 }
 
-struct Prob p_rerolls(struct Prob p, struct Set set)
+struct Prob p_rerolls(struct Prob p, struct PatternProb pt)
 {
-	double prr = p_has(p, set);
+	struct Prob p0 = p_dup(p);
+	struct Prob hit = pt_probs(pt, &p);
 
-	if(prr == 0.0 || prr == 1.0)
-		return p;
+	double pHit = p_sum(hit);
+	// we could yield rerolled values via `@` here
+	p_free(hit);
 
-	for (int i = 0; i < p.len; i++)
-		p.p[i] *= !set_has(set, p.low + i) + prr;
-
-	return p;
+	return p_merges(p, p0, pHit);
 }
 
-struct Prob p_sans(struct Prob p, struct Set set)
+struct Prob p_sans(struct Prob p, struct PatternProb pt)
 {
-	double prr = p_has(p, set);
-	int start = 0, end = 0;
+	struct Prob hit = pt_probs(pt, &p);
+	p_free(hit);
 
-	if(prr == 0.0)
-		return p;
-	if(prr == 1.0)
+	if(p_norms(&p) == 0.0)
 		eprintf("Every case of the function is discarded.\n");
-
-	for (int i = 0; i < p.len; i++)
-	{
-		if(set_has(set, p.low + i))
-		{
-			if(i == start)
-				start++;
-
-			p.p[i] = 0;
-		}
-		else
-		{
-			p.p[i] *= 1.0 / (1.0 - prr);
-			end = p.len - i - 1;
-		}
-	}
-
-	if(start)
-	{
-		p.low += start;
-		memmove(p.p, p.p + start, (p.len - start) * sizeof(double));
-		end += start;
-	}
-
-	if(end)
-	{
-		p.len -= end;
-		p.p = realloc(p.p, p.len * sizeof(double));
-	}
 
 	return p;
 }
@@ -725,7 +694,8 @@ struct Prob p_selects_bust(struct Prob p, int sel, int of, int bust, bool explod
 	int *const choose = chooseBuf(of);
 	const double p1 = *p.p;
 	// p without 1s
-	const struct Prob p2 = p_sans(p, SINGLETON(p.low, p.low));
+	const struct PatternProb lowPt = { .op = 0, .set = SINGLETON(p.low, p.low) };
+	const struct Prob p2 = p_sans(p, lowPt);
 
 	// range over # of 1s
 	for (int n = 0; n < bust; n++)

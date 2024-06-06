@@ -49,10 +49,18 @@ struct Prob translate(struct Prob *ctx, const struct Die *d)
 			return p_selects_bust(translate(ctx, d->select.v), d->select.sel, d->select.of, d->select.bust, d->op == UP_DOLLAR);
 
 		case '~':
-			return p_rerolls(translate(ctx, d->reroll.v), d->reroll.set);
+		{
+			struct PatternProb pt = pt_translate(ctx, *d->reroll.pat);
+
+			return p_rerolls(translate(ctx, d->reroll.v), pt);
+		}
 
 		case '\\':
-			return p_sans(translate(ctx, d->reroll.v), d->reroll.set);
+		{
+			struct PatternProb pt = pt_translate(ctx, *d->reroll.pat);
+
+			return p_sans(translate(ctx, d->reroll.v), pt);
+		}
 
 		case '!':
 			return p_explodes(translate(ctx, d->unop));

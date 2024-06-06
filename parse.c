@@ -628,7 +628,7 @@ static inline struct Die *_parse_pexpr(struct Die *left, ls_t *ls)
 
 			case '\\':
 			case '~':
-				left = d_clone((struct Die){ .op = op, .reroll = { .v = left, .set = _parse_set(ls) } });
+				left = d_clone((struct Die){ .op = op, .reroll = { .v = left, .pat = pt_clone(_parse_pattern(ls)) } });
 			continue;
 
 			case '[':
