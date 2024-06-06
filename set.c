@@ -1,7 +1,8 @@
 #include "set.h"
-#include "xmalloc.h"
+#include "util.h"
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

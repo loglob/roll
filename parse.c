@@ -65,7 +65,6 @@ die := n
 #include "ast.h"
 #include "die.h"
 #include "util.h"
-#include "xmalloc.h"
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>

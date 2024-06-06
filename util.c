@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -115,3 +116,20 @@ double normal(double mu, double sigma, int x)
 {
 	return phi(x + 0.5, mu, sigma) - phi(x - 0.5, mu, sigma);
 }
+
+#define X(f, argsDecl, args, doCheck) __attribute_malloc__ void *x##f argsDecl \
+	{ void *x = f args; if((doCheck) && !x) { perror(#f); exit(EXIT_FAILURE); } return x; }
+
+X(malloc, (size_t siz), (siz), siz)
+X(calloc, (size_t num, size_t siz), (num, siz), num && siz)
+X(realloc, (void *ptr, size_t siz), (ptr, siz), siz)
+
+void *recalloc(void *ptr, size_t num, size_t siz)
+{
+	if(siz > 0 && num > SIZE_MAX / siz)
+		eprintf("perror: Overflow in size calculation");
+	
+	return realloc(ptr, num * siz);
+}
+
+#undef X

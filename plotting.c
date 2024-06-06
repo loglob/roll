@@ -2,6 +2,7 @@
 #include "plotting.h"
 #include "prob.h"
 #include "settings.h"
+#include "util.h"
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>

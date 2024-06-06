@@ -5,7 +5,6 @@
 #include "prob.h"
 #include "set.h"
 #include "util.h"
-#include "xmalloc.h"
 #include <assert.h>
 #include <limits.h>
 #include <math.h>

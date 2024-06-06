@@ -2,7 +2,7 @@
 #include "parse.h"
 #include "pattern.h"
 #include "prob.h"
-#include "xmalloc.h"
+#include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

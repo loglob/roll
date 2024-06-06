@@ -50,3 +50,8 @@ double phi(double x, double mu, double sigma);
 
 // The probability of x being rolled on a rounded normal distribution with the given 𝜇 and 𝜎
 double normal(double mu, double sigma, int x);
+
+__attribute__((malloc)) void *xmalloc(size_t siz);
+__attribute__((malloc)) void *xcalloc(size_t n, size_t siz);
+__attribute__((malloc)) void *xrealloc(void *ptr, size_t siz);
+__attribute__((malloc)) void *xrecalloc(void *ptr, size_t siz, size_t n);
