@@ -63,7 +63,6 @@ die := n
 ;
 */
 #include "ast.h"
-#include "die.h"
 #include "util.h"
 #include <assert.h>
 #include <ctype.h>
@@ -75,6 +74,7 @@ die := n
 #include <stdlib.h>
 #include <string.h>
 
+#define SPECIAL OPS ",();]"
 
 static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=", "/=", "^$", "$^" };
 static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ, NEQ, UP_DOLLAR, DOLLAR_UP };

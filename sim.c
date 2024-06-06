@@ -1,6 +1,5 @@
 #include "die.h"
 #include "parse.h"
-#include "pattern.h"
 #include "prob.h"
 #include "settings.h"
 #include "sim.h"

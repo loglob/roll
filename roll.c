@@ -9,6 +9,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 
@@ -21,6 +22,21 @@ struct Settings settings =
 	.percentile = 25
 };
 
+
+bool d_boolean(struct Die *d)
+{
+	switch(d->op)
+	{
+		case '?':
+			return d_boolean(d->biop.l) && d_boolean(d->biop.r);
+
+		case ':':
+			return d_boolean(d->ternary.then) && d_boolean(d->ternary.otherwise);
+
+		default:
+			return strchr(RELOPS, d->op);
+	}
+}
 
 int main(int argc, char **argv)
 {
