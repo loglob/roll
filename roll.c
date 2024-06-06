@@ -1,14 +1,15 @@
 #define _POSIX_C_SOURCE 200809L
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include "parse.h"
 #include "plotting.h"
 #include "prob.h"
 #include "settings.h"
 #include "sim.h"
+#include "util.h"
 #include "xmalloc.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 
 struct Settings settings =

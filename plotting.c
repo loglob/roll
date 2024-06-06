@@ -1,14 +1,13 @@
 /* plotting.h: handles plotting of probability functions */
+#include "plotting.h"
+#include "prob.h"
+#include "settings.h"
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include "die.h"
-#include "plotting.h"
-#include "prob.h"
-#include "settings.h"
 
 
 // contains data for plotting a function

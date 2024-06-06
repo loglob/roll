@@ -1,16 +1,16 @@
 /* represents probability functions that map N onto Q, with the sum of every value equaling 1.
 	any function ending on 's' acts in-place or frees its arguments after use. */
-#include <assert.h>
-#include <limits.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
 #include "die.h"
 #include "parse.h"
 #include "prob.h"
 #include "set.h"
 #include "util.h"
 #include "xmalloc.h"
+#include <assert.h>
+#include <limits.h>
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 #define CLEAN_BIOP(T, name) T name##s (struct prob l, struct prob r) {\

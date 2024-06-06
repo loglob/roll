@@ -2,6 +2,7 @@
 #pragma once
 #include "set.h"
 
+
 /* represents a die expression as a syntax tree */
 struct die
 {

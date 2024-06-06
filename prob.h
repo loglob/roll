@@ -1,9 +1,9 @@
 /* represents probability functions that map N onto Q, with the sum of every value equaling 1.
 	any function ending on 's' acts in-place or frees its arguments after use. */
 #pragma once
-#include <stdbool.h>
-#include "pattern.h"
 #include "set.h"
+#include <stdbool.h>
+
 
 /* The highest value of p */
 #define p_h(p) ((p).low + (p).len - 1)

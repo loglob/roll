@@ -1,7 +1,7 @@
 // pattern.h: AST & functions for pattern matches
 #pragma once
-#include "die.h"
-#include "set.h"
+#include "ast.h"
+
 
 void pt_free(struct pattern pt);
 void pt_print(struct pattern p);

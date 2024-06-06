@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "die.h"
 #include "parse.h"
 #include "pattern.h"
@@ -7,6 +5,8 @@
 #include "settings.h"
 #include "sim.h"
 #include "xmalloc.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 
 /* Generates a random number in [1..pips] (uniform) */

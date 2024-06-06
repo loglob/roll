@@ -1,11 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "die.h"
 #include "parse.h"
 #include "pattern.h"
 #include "prob.h"
 #include "xmalloc.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 CLONE(d_clone, struct die)

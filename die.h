@@ -1,9 +1,9 @@
 // die.h: Defines the die struct and type.
 #pragma once
-#include <stdbool.h>
 #include "ast.h"
-#include "set.h"
 #include "prob.h"
+#include <stdbool.h>
+
 
 #define NUL ((char)0)
 #define INT ((char)-2)

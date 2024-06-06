@@ -1,7 +1,9 @@
+#include "die.h"
+#include "parse.h"
+#include "pattern.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "pattern.h"
-#include "parse.h"
+
 
 void pt_free(struct pattern p)
 {

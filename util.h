@@ -1,6 +1,7 @@
 #pragma once
 #include <stddef.h>
 
+
 #define CLONE_SIG(func, type) __attribute__((malloc)) type *func(type x);
 #define CLONE(func, type) type *func(type x) { type *y = xmalloc(sizeof(x)); *y = x; return y; }
 #define FREE_SIG(xfree, type) __attribute__((malloc)) void xfree##P;

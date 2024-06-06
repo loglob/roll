@@ -1,6 +1,7 @@
 // sim.h: Implements simulating die rolls
 #pragma once
-#include "die.h"
+#include "ast.h"
+
 
 /** Simulates a die roll.
 	If settings.verbose is true outputs additional information for each roll, such as intermediate results.

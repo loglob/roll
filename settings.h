@@ -2,6 +2,7 @@
 #pragma once
 #include <stdbool.h>
 
+
 extern struct Settings
 {
 	enum
