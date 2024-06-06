@@ -125,16 +125,15 @@ void d_free(struct Die die);
 void d_freeP(struct Die *die);
 
 /** Prints the given die expression, approximating the input format */
-void d_print(struct Die *d);
+void d_print(const struct Die *d);
 
 /** Prints the syntax tree of the given die expression
 	@param d a die expression
 	@param depth how deep the current expression should be indented, i.e. how many indirections were taken
 */
-void d_printTree(struct Die *d, int depth);
+void d_printTree(const struct Die *d, int depth);
 
 
 void pt_free(struct Pattern pt);
 void pt_print(struct Pattern p);
 void pt_freeP(struct Pattern *p);
-

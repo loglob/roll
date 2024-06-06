@@ -61,7 +61,7 @@ void pt_print(struct Pattern p)
 		set_print(p.set.entries);
 }
 
-void d_print(struct Die *d)
+void d_print(const struct Die *d)
 {
 	switch(d->op)
 	{
@@ -190,7 +190,7 @@ static void printIndent(int depth)
 		printf("|   ");
 }
 
-void d_printTree(struct Die *d, int depth)
+void d_printTree(const struct Die *d, int depth)
 {
 	printIndent(depth);
 

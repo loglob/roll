@@ -13,9 +13,11 @@
 	@param n The amount of range entries
 	@param entries The range entries
 	@param x The key to seek for
+	@param lo Overwritten with the highest lower bound, unless NULL 
+	@param hi Overwritten with the lowest upper bound, unless NULL 
 	@returns A pointer to the range segment containing x, or NULL if there is no such segment
  */
-static struct Range *_set_find(size_t n, struct Range entries[n], signed int x, struct Range **lo, struct Range **hi)
+static const struct Range *_set_find(size_t n, const struct Range entries[n], signed int x, const struct Range **lo, const struct Range **hi)
 {
 	if(n == 0)
 		return NULL;
@@ -39,7 +41,6 @@ static struct Range *_set_find(size_t n, struct Range entries[n], signed int x, 
 	else
 		return entries + m;
 }
-
 
 /** Merges multiple ranges in the given set
 	@param s The set to operate on
@@ -160,14 +161,14 @@ void set_free(struct Set set)
 
 bool set_hasAll(struct Set s, signed int start, signed int end)
 {
-	struct Range *hit = _set_find(s.length, s.entries, start, NULL, NULL);
+	const struct Range *hit = _set_find(s.length, s.entries, start, NULL, NULL);
 
 	return hit && (end <= hit->end || hit == _set_find(s.length, s.entries, end, NULL, NULL));
 }
 
 bool set_hasAny(struct Set s, signed int start, signed int end)
 {
-	struct Range *lo = NULL, *hi = NULL;
+	const struct Range *lo = NULL, *hi = NULL;
 
 	if(_set_find(s.length, s.entries, start, &lo, NULL) || _set_find(s.length, s.entries, end, NULL, &hi))
 		return true;

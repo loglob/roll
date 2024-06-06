@@ -67,7 +67,7 @@ struct Range d_limits(const int *ctx, const struct Die *d)
 	};
 }
 
-int sim(const int *ctx, struct Die *d)
+int sim(const int *ctx, const struct Die *d)
 {
 	switch(d->op)
 	{
