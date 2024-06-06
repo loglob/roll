@@ -14,7 +14,7 @@
 	@param entries The range entries
 	@param x The key to seek for
 	@returns A pointer to the range segment containing x, or NULL if there is no such segment
-*/
+ */
 static struct Range *_set_find(size_t n, struct Range entries[n], signed int x, struct Range **lo, struct Range **hi)
 {
 	if(n == 0)
@@ -69,7 +69,7 @@ static struct Range *_set_merge(struct Set *s, size_t lo, size_t hi)
 	@param start The start parameter of the range to add
 	@param end The end parameter of the range to add
 	@returns A pointer to the new range segment
-*/
+ */
 static struct Range *_set_add(struct Set *s, size_t spl, int start, int end)
 {
 	s->entries = xrealloc(s->entries, (s->length + 1) * sizeof(struct Range));
@@ -89,7 +89,7 @@ static struct Range *_set_add(struct Set *s, size_t spl, int start, int end)
 	@param start The start parameter of the range
 	@param start The end parameter of the range
 	@returns The r input pointer
-*/
+ */
 static struct Range *_set_adjust(struct Range *r, signed int start, signed int end)
 {
 	if(start < r->start)

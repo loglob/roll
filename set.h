@@ -17,7 +17,8 @@ struct Range
 };
 
 /** A set of integers that permits ranges as primitives.
-	Technically a Bag as there is no delete operation. */
+	Technically a Bag as there is no delete operation.
+ */
 struct Set
 {
 	/** An array of range segments, the disjunct union of which forms the overall set. Follows the axioms:
@@ -62,7 +63,7 @@ bool set_hasAny(struct Set s, signed int start, signed int end) PURE;
 	@param start The start of the range
 	@param end The end of the range
 	@returns Whether s contains every element between start and end, inclusive
-*/
+ */
 bool set_hasAll(struct Set s, signed int start, signed int end) PURE;
 
 /** Determines whether the given set is empty. */

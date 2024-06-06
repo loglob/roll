@@ -14,7 +14,7 @@
 #define CLEAN_BIOP(T, name) T name##s (struct Prob l, struct Prob r) {\
 	T res = name(l,r); p_free(l); if(l.p != r.p) p_free(r); return res; }
 
-/* The highest value of p */
+/** The highest value of p */
 #define p_h(p) ((p).low + (p).len - 1)
 
 /** Stores the 'next' combination of n numbers between 0 and max (exclusive) in ind.
@@ -24,7 +24,7 @@
 	@param n The amount of choices to make, i.e. the number of entries in ind
 	@param ind A buffer ∈ [0;max]ⁿ containing the last permutation, which is overwritten with the next one
 	@returns false if the all-0-combination was returned, true otherwise.
-*/
+ */
 static bool combinations(int max, int n, int ind[n])
 {
 	int i;
@@ -42,7 +42,7 @@ static bool combinations(int max, int n, int ind[n])
 	@param n The length of ind
 	@param ind A sorted list of possible choices
 	@return The amount of distinct permutations there are of ind
-*/
+ */
 static double permutations(int n, int ind[n])
 {
 	double nFact = 1;
@@ -70,7 +70,7 @@ static double permutations(int n, int ind[n])
 /** Computes all binomial coefficients for a given number
 	@param N The n parameter for the binomial coefficients
 	@returns Array a of length N-1, s.t. a[i] = (N choose (i+1)), or NULL if N <= 1
-*/
+ */
 static int *chooseBuf(int N)
 {
 	if(N < 2)
@@ -155,7 +155,8 @@ double p_sum(struct Prob p)
 }
 
 /** The total sum of a probability function.
-	i.e. 1 is axiom (1) holds. */
+	i.e. 1 is axiom (1) holds.
+ */
 double p_norms(struct Prob *p)
 {
 	double sum = p_sum(*p);

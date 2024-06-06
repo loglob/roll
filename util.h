@@ -22,7 +22,6 @@ void prls(const int *ls, size_t c);
 __attribute__((pure, leaf))
 int sumls(const signed int *ls, size_t c);
 
-
 /** Prints an array of ints and (if needed) their sum. Prints a newline afterwards.
 	@returns The sum
 */
@@ -57,7 +56,6 @@ double phi(double x, double mu, double sigma);
 /** The probability of x being rolled on a rounded normal distribution with the given 𝜇 and 𝜎 */
 __attribute__((const, leaf))
 double normal(double mu, double sigma, int x);
-
 
 __attribute__((leaf, malloc, returns_nonnull, alloc_size(1)))
 void *xmalloc(size_t siz);

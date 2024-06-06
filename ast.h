@@ -38,7 +38,7 @@
 /** All valid values for `Die.op` */
 #define OPS BIOPS UOPS "@[:"
 
-/* represents a die expression as a syntax tree */
+/** represents a die expression as a syntax tree */
 struct Die
 {
 	char op;

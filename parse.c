@@ -7,14 +7,13 @@ n := INT | 0+ | - INT ;
 RELOP := < | > | <= | >= | = ;
 
 lim := n
-	| ^
-	| - ^
-	| _
-	| - _
+	| *
 ;
 
 range := lim
 	| lim - lim
+	| ^
+	| _
 ;
 
 set := range
@@ -22,6 +21,7 @@ set := range
 ;
 
 pattern := set
+	| ! set
 	| RELOP die
 ;
 
@@ -36,10 +36,8 @@ cases := case
 die := n
 	| '@'
 	| 'd' die
-	| die ~ set
-	| die ~ ! set
-	| die \ set
-	| die \ ! set
+	| die ~ pattern
+	| die \ pattern
 	| die ^ INT / INT
 	| die ^ INT
 	| die ^! INT
@@ -81,7 +79,7 @@ static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ, NEQ, UP_DOLLAR
 
 #define MAX_PAREN_DEPTH (sizeof(unsigned long long) * CHAR_BIT)
 
-/* represents the state of the lexer */
+/** represents the state of the lexer */
 typedef struct LexState
 {
 	bool unlex;
@@ -119,7 +117,7 @@ const char *tkstr(char tk)
 	}
 }
 
-/* Like _badtk, but accepts strings instead of chars. An empty string encodes the NUL token. */
+/** Like _badtk, but accepts strings instead of chars. An empty string encodes the NUL token. */
 static void _badtks(ls_t ls, const char *first, ...)
 {
 	va_list vl;
@@ -154,7 +152,7 @@ static void _badtks(ls_t ls, const char *first, ...)
 	exit(EXIT_FAILURE);
 }
 
-/* Prints an error message, describing that a token isn't in the given list of expected tokens. */
+/** Prints an error message, describing that a token isn't in the given list of expected tokens. */
 static void _badtk(ls_t ls, int first, ...)
 {
 	va_list vl;
@@ -292,17 +290,20 @@ static bool _popParen(struct LexState *ls, bool bracket)
 		return false;
 }
 
-/* Retrieves the next token. Returns the read token kind. */
+/** Retrieves the next token. Returns the read token kind. */
 #define lex() _lex(ls)
-/* Reads the next token abd asserts that it's the given token.
-	Returns the number read. */
+/** Reads the next token abd asserts that it's the given token.
+	Returns the number read.
+ */
 #define lexc(tk) _lexc(ls, tk)
-/* Causes the next lex() call to return the same token as the last.
-	Only valid if lex() was called since the last call to unlex() */
+/** Causes the next lex() call to return the same token as the last.
+	Only valid if lex() was called since the last call to unlex()
+ */
 #define unlex() _unlex(ls)
-/* Reads the next token.
+/** Reads the next token.
 	Then checks if its kind is c and unlex()es it if it isn't.
-	Returns whether the token matched. */
+	Returns whether the token matched.
+ */
 #define lexm(tk) _lexm(ls,tk)
 /** Tries popping a paren from the parenthesis stack */
 #define popParen(br) _popParen(ls, br)
@@ -317,7 +318,7 @@ static bool _popParen(struct LexState *ls, bool bracket)
 /** The operator precedence of the given operator.
 	a lower precedence denotes operators that would be evaluated sooner.
 	An even precedence indicates left- and odd indicates right association.
-	*/
+ */
 static int precedence(char op)
 {
 	if(strchr(RELOPS, op))
@@ -363,7 +364,8 @@ static struct Die *d_merge(struct Die *left, char op, struct Die *right)
 static struct Die *_parse_expr(ls_t *ls);
 
 /** Parses an atom expression, so a number, a unary minus or a parenthesized expression.
-	Also expands INT d into INT x d (see line 2) */
+	Also expands INT d into INT x d (see line 2)
+ */
 static inline struct Die *_parse_atom(ls_t *ls)
 {
 	switch (lex())
@@ -421,7 +423,7 @@ static inline struct Die *_parse_atom(ls_t *ls)
 /** Parses a range limit in a set filter
 	@param res Stores the finite limit, on true
 	@return Whether a finite limit was given
-*/
+ */
 static inline bool _parse_lim(ls_t *ls, int *res)
 {
 	switch(lex())
@@ -531,7 +533,7 @@ static inline struct Pattern _parse_pattern(ls_t *ls)
 	@param _actions output for actions
 	@param ls lexer state
 	@returns Amount of cases read
-*/
+ */
 int _parse_matches(struct Pattern **_patterns, struct Die **_actions, ls_t *ls)
 {
 	int count = 0;
@@ -587,7 +589,8 @@ int _parse_matches(struct Pattern **_patterns, struct Die **_actions, ls_t *ls)
 
 /** Iteratively parses every postfix unary operator.
 	left is optional and represents the expression the postfix is applied to.
-	Mutually recurses with _parse_expr() to parse parenthesized expressions. */
+	Mutually recurses with _parse_expr() to parse parenthesized expressions.
+ */
 static inline struct Die *_parse_pexpr(struct Die *left, ls_t *ls)
 {
 	if(!left)
@@ -666,7 +669,8 @@ static inline struct Die *_parse_pexpr(struct Die *left, ls_t *ls)
 }
 
 /** Iteratively parses every infix binary operator.
-	Mutually recurses with _parse_pexpr() to parse parenthesized expressions. */
+	Mutually recurses with _parse_pexpr() to parse parenthesized expressions.
+ */
 static struct Die *_parse_expr(ls_t *ls)
 {
 	// the expression being constructed. Always a complete expression (i.e. not missing any leaves)

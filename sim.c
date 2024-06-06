@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 
-/* Generates a random number in [1..pips] (uniform) */
+/** Generates a random number in [1..pips] (uniform) */
 static inline int roll(int pips)
 {
 	int largestMult = RAND_MAX - (RAND_MAX % pips);

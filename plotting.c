@@ -11,23 +11,23 @@
 #include <unistd.h>
 
 
-// contains data for plotting a function
+/** contains data for plotting a function */
 struct PlotInfo {
-	// the maximum length of the preamble
+	/** the maximum length of the preamble */
 	int prLen;
-	// the preamble format string
+	/** the preamble format string */
 	const char *preamble;
-	// the amount of digits before the decimal in the percentages
+	/** the amount of digits before the decimal in the percentages */
 	int floatLen;
-	// the amount of bars to draw per percent
+	/** the amount of bars to draw per percent */
 	double scaling;
-	// The cutoff below which values aren't displayed
+	/** The cutoff below which values aren't displayed */
 	double cutoff;
 };
 
 #pragma region internal functions
 
-/* Retrieves the total width of the terminal */
+/** Retrieves the total width of the terminal */
 static unsigned int hcol()
 {
 	if(settings.hcolOverwrite)
@@ -45,7 +45,7 @@ static unsigned int hcol()
 	return 200;
 }
 
-/* Determines the width of a number if printed in base10 */
+/** Determines the width of a number if printed in base10 */
 static inline int numw(signed int n)
 {
 	return n ? ((n < 0) + 1 + floor(log10((double)abs(n)))) : 1;
@@ -56,7 +56,7 @@ static inline int numw(signed int n)
 	@param prlen The max length of the preamble. A preamble is padded to at least this length.
 	@param pmax The maximum probability in the plotted data.
 	@returns A structure that contains information on how to format plotted data
-*/
+ */
 static struct PlotInfo plot_init(const char *preamble, int prlen, double pmax)
 {
 	struct PlotInfo pi = {
@@ -95,7 +95,7 @@ static struct PlotInfo plot_init(const char *preamble, int prlen, double pmax)
 	@param ... The arguments to the format string passed in to plot_init
 	@returns Whether this row was actually included in the output,
 		instead of being trimmed due to cutoff settings.
-*/
+ */
 static bool plot_preamble(struct PlotInfo pi, double p, ...)
 {
 	va_list l;
@@ -122,7 +122,7 @@ static bool plot_preamble(struct PlotInfo pi, double p, ...)
 /** Prints a bar of a plot.
 	@param pi obtained from plot_init().
 	@param p the current probability.
-*/
+ */
 static void plot_bar(struct PlotInfo pi, double p)
 {
 	int barLen = (int)round(p * pi.scaling);
@@ -196,7 +196,7 @@ void plot_diff(struct Prob p, struct Prob e)
 	@param pi obtained from plot_init()
 	@returns p without trimmed values, as per program settings.
 		References the same array as the input.
-*/
+ */
 static struct Prob p_trims(struct Prob p, struct PlotInfo pi)
 {
 	// left and right offsets

@@ -9,11 +9,11 @@ extern struct Settings
 	{
 		/** Dice should be analyzed and their value distribution plotted.
 			Selected by -p
-		*/
+		 */
 		PREDICT,
 		/** Dice should be analyzed, and compared to a Gaussian distribution with the same µ and σ.
 			Selected by -
-		*/
+		 */
 		PREDICT_COMP_NORMAL,
 		/** Dice should be analyzed, and compared to a reference die, stored in compare */
 		PREDICT_COMP,
