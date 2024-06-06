@@ -2,9 +2,9 @@
 #include <stddef.h>
 
 
-#define CLONE_SIG(func, type) __attribute__((malloc)) type *func(type x);
+#define CLONE_SIG(func, type) __attribute__((malloc, returns_nonnull, leaf)) type *func(type x);
 #define CLONE(func, type) type *func(type x) { type *y = xmalloc(sizeof(x)); *y = x; return y; }
-#define FREE_SIG(xfree, type) __attribute__((malloc)) void xfree##P;
+#define FREE_SIG(xfree, type) void xfree##P;
 #define FREE_P(xfree, type) void xfree##P (type *x) { if(x) { xfree(*x); free(x); } }
 
 /** like printf, but prints onto stderr and exits with EXIT_FAILURE. */

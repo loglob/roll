@@ -9,4 +9,4 @@
 	@param p A die expression
 	@returns The result of rolling d
 */
-int sim(const int *ctx, struct die *d);
+int sim(const int *ctx, struct Die *d);

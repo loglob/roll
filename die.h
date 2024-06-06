@@ -2,6 +2,7 @@
 #pragma once
 #include "ast.h"
 #include "prob.h"
+#include "util.h"
 #include <stdbool.h>
 
 
@@ -35,24 +36,25 @@
 
 
 /** Frees all resources used by a die expression. */
-void d_free(struct die die);
-void d_freeP(struct die *die);
-struct die *d_clone(struct die d);
+void d_free(struct Die die);
+void d_freeP(struct Die *die);
+
+CLONE_SIG(d_clone, struct Die)
 
 /** Determines if d is a boolean expression */
-bool d_boolean(struct die *d);
+bool d_boolean(struct Die *d);
 
 /** Prints the given die expression, approximating the input format */
-void d_print(struct die *d);
+void d_print(struct Die *d);
 
 /** Prints the syntax tree of the given die expression
 	@param d a die expression
 	@param depth how deep the current expression should be indented, i.e. how many indirections were taken
 */
-void d_printTree(struct die *d, int depth);
+void d_printTree(struct Die *d, int depth);
 
 /* Transforms a dice expression to equivalent probability function. */
-struct prob translate(struct prob *ctx, const struct die *d);
+struct Prob translate(struct Prob *ctx, const struct Die *d);
 
 /* Translates pattern for probability checking. */
-struct patternProb pt_translate(struct prob *ctx, struct pattern p);
+struct PatternProb pt_translate(struct Prob *ctx, struct Pattern p);

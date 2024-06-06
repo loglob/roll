@@ -27,12 +27,12 @@ static inline int roll(int pips)
 	@param x a value
 	@return whether x is matched by p
  */
-static bool pt_matches(const int *ctx, struct pattern p, int x)
+static bool pt_matches(const int *ctx, struct Pattern p, int x)
 {
 	if(p.op)
 	{
-		struct die c = (struct die){ .op = INT, .constant = x };
-		struct die d = (struct die){ .op = p.op, .biop = { .l = &c, .r = &p.die } };
+		struct Die c = (struct Die){ .op = INT, .constant = x };
+		struct Die d = (struct Die){ .op = p.op, .biop = { .l = &c, .r = &p.die } };
 
 		return sim(ctx, &d);
 	}
@@ -40,23 +40,18 @@ static bool pt_matches(const int *ctx, struct pattern p, int x)
 		return set_has(p.set, x);
 }
 
-struct minMax
+struct Range d_limits(const int *ctx, const struct Die *d)
 {
-	int min, max;
-};
-
-struct minMax d_limits(const int *ctx, const struct die *d)
-{
-	struct prob c = P_CONST(ctx ? *ctx : -1);
-	struct prob p = translate(ctx ? &c : NULL, d);
+	struct Prob c = P_CONST(ctx ? *ctx : -1);
+	struct Prob p = translate(ctx ? &c : NULL, d);
 	p_free(p);
 
-	return (struct minMax) {
+	return (struct Range) {
 		p.low, p_h(p)
 	};
 }
 
-int sim(const int *ctx, struct die *d)
+int sim(const int *ctx, struct Die *d)
 {
 	switch(d->op)
 	{
@@ -146,7 +141,7 @@ int sim(const int *ctx, struct die *d)
 			int sum = sumls(selected, d->select.sel);
 
 			// the minimum and maximum possible values of `d->select.v`
-			struct minMax vLimits;
+			struct Range vLimits;
 
 			if(d->op == UP_BANG || d->op == UP_DOLLAR || d->op == DOLLAR_UP)
 				vLimits = d_limits(ctx, d->select.v);
@@ -155,7 +150,7 @@ int sim(const int *ctx, struct die *d)
 			{	
 				for (int i = 0; i < d->select.bust; i++)
 				{
-					if(buf[i] != vLimits.min)
+					if(buf[i] != vLimits.start)
 						goto not_bust;
 				}
 
@@ -166,7 +161,7 @@ int sim(const int *ctx, struct die *d)
 					printf(" and went bust\n");
 				}
 
-				sum = vLimits.min - 1;
+				sum = vLimits.start - 1;
 				goto bust;
 			}
 
@@ -185,7 +180,7 @@ int sim(const int *ctx, struct die *d)
 			{
 				int n_max = 0;
 
-				for (int i = d->select.of; --i && buf[i] == vLimits.max;)
+				for (int i = d->select.of; --i && buf[i] == vLimits.end;)
 					n_max++;
 
 				int explosions = n_max/EXPLODE_RATIO;
@@ -291,26 +286,26 @@ int sim(const int *ctx, struct die *d)
 
 		case '$':
 		{
-			struct minMax lim = d_limits(ctx, d->explode.v);
+			struct Range lim = d_limits(ctx, d->explode.v);
 			int cur = sim(ctx, d->explode.v);
 			int sum = cur;
 			int i;
 
-			for (i = 0; i < d->explode.rounds && cur == lim.max; i++)
+			for (i = 0; i < d->explode.rounds && cur == lim.end; i++)
 				sum += cur = sim(ctx, d->explode.v);
 
 			if(i > 0 && settings.verbose)
-				printf("Rolled a %d which exploded %d times to %d\n", lim.max, i, sum);
+				printf("Rolled a %d which exploded %d times to %d\n", lim.end, i, sum);
 
 			return sum;
 		}
 
 		case '!':
 		{
-			struct minMax lim = d_limits(ctx, d->unop);
+			struct Range lim = d_limits(ctx, d->unop);
 			int r1 = sim(ctx, d->unop);
 
-			if(r1 == lim.max)
+			if(r1 == lim.end)
 			{
 				int r2 = sim(ctx, d->unop);
 
@@ -319,7 +314,7 @@ int sim(const int *ctx, struct die *d)
 
 				return r1 + r2;
 			}
-			else if(r1 == lim.min)
+			else if(r1 == lim.start)
 			{
 				int r2 = sim(ctx, d->unop);
 

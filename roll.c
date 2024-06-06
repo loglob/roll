@@ -266,7 +266,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		struct die *d = parse(argv[i]);
+		struct Die *d = parse(argv[i]);
 
 		if(settings.debug)
 			d_printTree(d, 0);
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 			case PREDICT_COMP:
 			case PREDICT_COMP_NORMAL:
 			{
-				struct prob p = translate(NULL, d);
+				struct Prob p = translate(NULL, d);
 
 				d_print(d);
 				printf(":\n");
@@ -311,8 +311,8 @@ int main(int argc, char **argv)
 
 					if(settings.mode == PREDICT_COMP_NORMAL)
 					{
-						settings.compare = xmalloc(sizeof(struct prob));
-						*settings.compare = (struct prob){ .len = p.len + 2, .low = p.low - 1,
+						settings.compare = xmalloc(sizeof(struct Prob));
+						*settings.compare = (struct Prob){ .len = p.len + 2, .low = p.low - 1,
 							.p = xmalloc(sizeof(double) * (p.len + 2)) };
 
 						// do this so absolute error is correct & squared error won't be under-reported
@@ -332,7 +332,7 @@ int main(int argc, char **argv)
 
 				if(settings.mode == PREDICT_COMP && !settings.compare)
 				{
-					settings.compare = xmalloc(sizeof(struct prob));
+					settings.compare = xmalloc(sizeof(struct Prob));
 					settings.compare[0] = p;
 				}
 				else
@@ -349,7 +349,7 @@ int main(int argc, char **argv)
 
 			case COMPARE:
 			{
-				struct prob p = translate(NULL, d);
+				struct Prob p = translate(NULL, d);
 
 				d_print(d);
 				printf(" <=> %d:\n", settings.compareValue);

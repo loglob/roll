@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 
-void pt_free(struct pattern p)
+void pt_free(struct Pattern p)
 {
 	if(p.op)
 		d_free(p.die);
@@ -13,7 +13,7 @@ void pt_free(struct pattern p)
 		set_free(p.set);
 }
 
-void pt_freeD(struct pattern *p)
+void pt_freeD(struct Pattern *p)
 {
 	if(p)
 	{
@@ -22,7 +22,7 @@ void pt_freeD(struct pattern *p)
 	}
 }
 
-void pt_print(struct pattern p)
+void pt_print(struct Pattern p)
 {
 	if(p.op)
 	{

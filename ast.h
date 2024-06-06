@@ -4,40 +4,40 @@
 
 
 /* represents a die expression as a syntax tree */
-struct die
+struct Die
 {
 	char op;
 	union
 	{
 		// valid if op == ':'
-		struct { struct die *cond, *then, *otherwise; } ternary;
+		struct { struct Die *cond, *then, *otherwise; } ternary;
 		// valid if op in BIOPS
-		struct { struct die *l, *r; } biop;
+		struct { struct Die *l, *r; } biop;
 		// valid if op in SELECT
-		struct { struct die *v; int sel, of, bust; } select;
+		struct { struct Die *v; int sel, of, bust; } select;
 		/** valid if op in REROLLS*/
 		struct
 		{
 			/** The die to roll on */
-			struct die *v;
+			struct Die *v;
 			/** The results to reroll */
-			struct set set;
+			struct Set set;
 		} reroll;
 		// valid if op is '$'
-		struct { struct die *v; int rounds; } explode;
+		struct { struct Die *v; int rounds; } explode;
 		// valid if op is '['
 		struct {
-			struct die *v;
+			struct Die *v;
 			/** The length of patterns and actions */
 			int cases;
 			/** The patterns that are matched against */
-			struct pattern *patterns;
+			struct Pattern *patterns;
 			/** The dice rolled when the corresponding pattern matches.
 				May be NULL to indicate a pattern check rather than match. */
-			struct die *actions;
+			struct Die *actions;
 		} match;
 		// valid if op in UOPS
-		struct die *unop;
+		struct Die *unop;
 		// valid if op == INT
 		int constant;
 	};
@@ -58,15 +58,15 @@ struct die
 
 	MATCH := '[' MATCHES ']' ;
 */
-struct pattern
+struct Pattern
 {
 	/** The comparison operator, or 0 if this is a set pattern */
 	char op;
 	union
 	{
 		/** A set to match against. Valid if op is 0 */
-		struct set set;
+		struct Set set;
 		/** A die to compare against, if op is in RELOPS */
-		struct die die;
+		struct Die die;
 	};
 };

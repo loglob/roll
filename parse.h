@@ -8,4 +8,4 @@
 const char *tkstr(char tk);
 
 /** Parses a die expression. Exits on parse failure. */
-struct die *parse(const char *str);
+struct Die *parse(const char *str);

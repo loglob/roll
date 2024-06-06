@@ -12,7 +12,7 @@
 
 
 // contains data for plotting a function
-struct plotInfo {
+struct PlotInfo {
 	// the maximum length of the preamble
 	int prLen;
 	// the preamble format string
@@ -57,9 +57,9 @@ static inline int numw(signed int n)
 	@param pmax The maximum probability in the plotted data.
 	@returns A structure that contains information on how to format plotted data
 */
-static struct plotInfo plot_init(const char *preamble, int prlen, double pmax)
+static struct PlotInfo plot_init(const char *preamble, int prlen, double pmax)
 {
-	struct plotInfo pi = {
+	struct PlotInfo pi = {
 		.preamble = preamble,
 		.prLen = prlen,
 		.cutoff = settings.cutoff
@@ -96,7 +96,7 @@ static struct plotInfo plot_init(const char *preamble, int prlen, double pmax)
 	@returns Whether this row was actually included in the output,
 		instead of being trimmed due to cutoff settings.
 */
-static bool plot_preamble(struct plotInfo pi, double p, ...)
+static bool plot_preamble(struct PlotInfo pi, double p, ...)
 {
 	va_list l;
 	va_start(l, p);
@@ -123,7 +123,7 @@ static bool plot_preamble(struct plotInfo pi, double p, ...)
 	@param pi obtained from plot_init().
 	@param p the current probability.
 */
-static void plot_bar(struct plotInfo pi, double p)
+static void plot_bar(struct PlotInfo pi, double p)
 {
 	int barLen = (int)round(p * pi.scaling);
 
@@ -139,7 +139,7 @@ static void plot_bar(struct plotInfo pi, double p)
 	@param p the current probability
 	@param e the expected probability from the distribution being compared
  */
-static void plot_barC(struct plotInfo pi, double p, double e)
+static void plot_barC(struct PlotInfo pi, double p, double e)
 {
 	int barLen = (int)round(p * pi.scaling);
 	int expLen = (int)round(e * pi.scaling);
@@ -157,7 +157,7 @@ static void plot_barC(struct plotInfo pi, double p, double e)
 	putchar('\n');
 }
 
-void plot_diff(struct prob p, struct prob e)
+void plot_diff(struct Prob p, struct Prob e)
 {
 	double sumErr = 0, sumSqErr = 0, sumRelErr = 0, sumSqRelErr = 0;
 	int lowest = min(p.low, e.low);
@@ -197,7 +197,7 @@ void plot_diff(struct prob p, struct prob e)
 	@returns p without trimmed values, as per program settings.
 		References the same array as the input.
 */
-static struct prob p_trims(struct prob p, struct plotInfo pi)
+static struct Prob p_trims(struct Prob p, struct PlotInfo pi)
 {
 	// left and right offsets
 	int start, end;
@@ -211,12 +211,12 @@ static struct prob p_trims(struct prob p, struct plotInfo pi)
 		end = max(end, p_h(p) - settings.rHigh);
 	}
 
-	return (struct prob){ .len = p.len - start - end, .low = p.low + start, .p = p.p + start };
+	return (struct Prob){ .len = p.len - start - end, .low = p.low + start, .p = p.p + start };
 }
 
 #pragma endregion
 
-void p_plot(struct prob p)
+void p_plot(struct Prob p)
 {
 	int mw = max(numw(p.low), numw(p_h(p)));
 	double pmax = p.p[0];
@@ -238,12 +238,12 @@ void p_plot(struct prob p)
 		}
 	}
 
-	struct plotInfo pi = plot_init("%*d", mw, pmax);
+	struct PlotInfo pi = plot_init("%*d", mw, pmax);
 	p = p_trims(p, pi);
 
 	if(settings.mode == PREDICT_COMP && settings.compare)
 	{
-		struct prob c = p_trims(*settings.compare, pi);
+		struct Prob c = p_trims(*settings.compare, pi);
 		int hi = max(p_h(p), p_h(c));
 
 		for (int n = min(p.low, c.low); n <= hi; n++)
@@ -261,7 +261,7 @@ void p_plot(struct prob p)
 	}
 }
 
-void p_header(struct prob p, double *mu, double *sigma)
+void p_header(struct Prob p, double *mu, double *sigma)
 {
 	double avg = 0.0;
 	double var = 0.0;
@@ -299,11 +299,11 @@ void p_header(struct prob p, double *mu, double *sigma)
 		*sigma = sqrt(var);
 }
 
-void p_printB(struct prob p)
+void p_printB(struct Prob p)
 {
 	const char *strs[] = { "false", "true" };
 	bool isConst = p.len == 1;
-	struct plotInfo pi = plot_init("%s", 5, isConst ? 1.0 : p.p[p.p[0] < p.p[1]]);
+	struct PlotInfo pi = plot_init("%s", 5, isConst ? 1.0 : p.p[p.p[0] < p.p[1]]);
 
 	for (int i = 0; i <= 1; i++)
 	{
@@ -313,7 +313,7 @@ void p_printB(struct prob p)
 	}
 }
 
-void p_comp(struct prob p, int to)
+void p_comp(struct Prob p, int to)
 {
 	double cpr[5] = {};
 	const char *op[] = { "<= ", " < ", " = ", " > ", ">= " };
@@ -332,7 +332,7 @@ void p_comp(struct prob p, int to)
 	cpr[4] = cpr[3] + cpr[2];
 	double pmax = (cpr[0] > cpr[4]) ? cpr[0] : cpr[4];
 
-	struct plotInfo pi = plot_init("%s%d", 3 + numw(to), pmax);
+	struct PlotInfo pi = plot_init("%s%d", 3 + numw(to), pmax);
 
 	for (int i = 0; i < 5; i++)
 	{
@@ -341,7 +341,7 @@ void p_comp(struct prob p, int to)
 	}
 }
 
-void p_debug(struct prob p)
+void p_debug(struct Prob p)
 {
 	double sum = 0;
 	bool a0 = true;

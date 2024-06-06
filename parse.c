@@ -82,7 +82,7 @@ static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ, NEQ, UP_DOLLAR
 #define MAX_PAREN_DEPTH (sizeof(unsigned long long) * CHAR_BIT)
 
 /* represents the state of the lexer */
-typedef struct lexState
+typedef struct LexState
 {
 	bool unlex;
 	const char *pos, *err;
@@ -191,7 +191,7 @@ static void _badtk(ls_t ls, int first, ...)
 
 #pragma region lexer functions
 
-static char _lex(struct lexState *ls)
+static char _lex(struct LexState *ls)
 {
 	char i;
 
@@ -244,7 +244,7 @@ static char _lex(struct lexState *ls)
 	__builtin_unreachable();
 }
 
-static int _lexc(struct lexState *ls, char c)
+static int _lexc(struct LexState *ls, char c)
 {
 	if(_lex(ls) != c)
 		badtk(c);
@@ -252,7 +252,7 @@ static int _lexc(struct lexState *ls, char c)
 	return ls->num;
 }
 
-static void _unlex(struct lexState *ls)
+static void _unlex(struct LexState *ls)
 {
 	if(ls->unlex)
 		eprintf("Parsing failed: Double unlex\n");
@@ -260,7 +260,7 @@ static void _unlex(struct lexState *ls)
 	ls->unlex = true;
 }
 
-static bool _lexm(struct lexState *ls, char c)
+static bool _lexm(struct LexState *ls, char c)
 {
 	if(_lex(ls) == c)
 		return true;
@@ -271,7 +271,7 @@ static bool _lexm(struct lexState *ls, char c)
 	}
 }
 
-static void _pushParen(struct lexState *ls, bool bracket)
+static void _pushParen(struct LexState *ls, bool bracket)
 {
 	if(ls->parenDepth >= MAX_PAREN_DEPTH)
 		eprintf("Too many parenthesis layers, maximum is %zu\n", MAX_PAREN_DEPTH);
@@ -280,7 +280,7 @@ static void _pushParen(struct lexState *ls, bool bracket)
 	ls->parenStack = bracket | (ls->parenStack << 1);
 }
 
-static bool _popParen(struct lexState *ls, bool bracket)
+static bool _popParen(struct LexState *ls, bool bracket)
 {
 	if(ls->parenDepth && (ls->parenStack & 1) == bracket)
 	{
@@ -345,7 +345,7 @@ static int precedence(char op)
 }
 
 /** Merges two expressions with a binary operator. Handles operator precedence. */
-static struct die *d_merge(struct die *left, char op, struct die *right)
+static struct Die *d_merge(struct Die *left, char op, struct Die *right)
 {
 	int pl = precedence(left->op);
 	int p = precedence(op);
@@ -356,22 +356,22 @@ static struct die *d_merge(struct die *left, char op, struct die *right)
 		return left;
 	}
 	else
-		return d_clone((struct die){ .op = op, .biop = { .l = left, .r = right } });
+		return d_clone((struct Die){ .op = op, .biop = { .l = left, .r = right } });
 }
 
 
-static struct die *_parse_expr(ls_t *ls);
+static struct Die *_parse_expr(ls_t *ls);
 
 /** Parses an atom expression, so a number, a unary minus or a parenthesized expression.
 	Also expands INT d into INT x d (see line 2) */
-static inline struct die *_parse_atom(ls_t *ls)
+static inline struct Die *_parse_atom(ls_t *ls)
 {
 	switch (lex())
 	{
 		case INT:
 		case ZERO:
 		{
-			struct die *ret = d_clone((struct die){ .op = INT, .constant = ls->num });
+			struct Die *ret = d_clone((struct Die){ .op = INT, .constant = ls->num });
 
 			// peek forward
 			ls_t bak = *ls;
@@ -388,29 +388,29 @@ static inline struct die *_parse_atom(ls_t *ls)
 		}
 
 		case 'd':
-			return d_clone((struct die){ .op = 'd', .unop = _parse_atom(ls) });
+			return d_clone((struct Die){ .op = 'd', .unop = _parse_atom(ls) });
 
 		case '(':
 			pushParen(false);
 			return _parse_expr(ls);
 
 		case '-':
-			return d_clone((struct die)
+			return d_clone((struct Die)
 				{
 					.op = '(',
-					.unop = d_clone((struct die)
+					.unop = d_clone((struct Die)
 					{
 						.op = '-',
 						.biop =
 						{
-							.l = d_clone((struct die){ .op = INT, .constant = 0 }),
+							.l = d_clone((struct Die){ .op = INT, .constant = 0 }),
 							.r = _parse_atom(ls)
 						}
 					})
 				});
 
 		case '@':
-			return d_clone((struct die) { .op = '@' });
+			return d_clone((struct Die) { .op = '@' });
 
 		default:
 			badtk(INT, '@', 'd', '(');
@@ -459,9 +459,9 @@ static inline bool _parse_lim(ls_t *ls, int *res)
 	}
 }
 
-static struct set _parse_set(ls_t *ls)
+static struct Set _parse_set(ls_t *ls)
 {
-	struct set set = { .negated = lexm('!') };
+	struct Set set = { .negated = lexm('!') };
 
 	do
 	{
@@ -488,14 +488,14 @@ static struct set _parse_set(ls_t *ls)
 }
 
 /** Parses a pattern specifier */
-static inline struct pattern _parse_pattern(ls_t *ls)
+static inline struct Pattern _parse_pattern(ls_t *ls)
 {
 	char c = lex();
 
 	if(strchr(RELOPS, c))
 	{
-		struct die *d = _parse_expr(ls);
-		struct pattern pt = { .op = c, .die = *d };
+		struct Die *d = _parse_expr(ls);
+		struct Pattern pt = { .op = c, .die = *d };
 
 		free(d);
 
@@ -504,7 +504,7 @@ static inline struct pattern _parse_pattern(ls_t *ls)
 	else
 	{
 		unlex();
-		return (struct pattern){ .op = 0, .set = _parse_set(ls) };
+		return (struct Pattern){ .op = 0, .set = _parse_set(ls) };
 	}
 }
 
@@ -515,13 +515,13 @@ static inline struct pattern _parse_pattern(ls_t *ls)
 	@param ls lexer state
 	@returns Amount of cases read
 */
-int _parse_matches(struct pattern **_patterns, struct die **_actions, ls_t *ls)
+int _parse_matches(struct Pattern **_patterns, struct Die **_actions, ls_t *ls)
 {
 	int count = 0;
 
 	int capacity = 8;
-	struct pattern *patterns = xcalloc(capacity, sizeof(struct pattern));
-	struct die *actions = NULL;
+	struct Pattern *patterns = xcalloc(capacity, sizeof(struct Pattern));
+	struct Die *actions = NULL;
 
 	pushParen(true);
 
@@ -533,24 +533,24 @@ int _parse_matches(struct pattern **_patterns, struct die **_actions, ls_t *ls)
 		if(count >= capacity)
 		{
 			capacity *= 2;
-			patterns = xrealloc(patterns, sizeof(struct pattern) * capacity);
+			patterns = xrealloc(patterns, sizeof(struct Pattern) * capacity);
 
 			if(actions)
-				actions = xrealloc(actions, sizeof(struct die) * capacity);
+				actions = xrealloc(actions, sizeof(struct Die) * capacity);
 		}
 
 		patterns[count] = _parse_pattern(ls);
 
 		if(!count && lexm(':'))
 		{
-			actions = xcalloc(capacity, sizeof(struct die));
+			actions = xcalloc(capacity, sizeof(struct Die));
 			goto parse_action;
 		}
 		else if(count && actions)
 		{
 			lexc(':');
 			parse_action:;
-			struct die *d = _parse_expr(ls);
+			struct Die *d = _parse_expr(ls);
 
 			actions[count] = *d;
 
@@ -562,8 +562,8 @@ int _parse_matches(struct pattern **_patterns, struct die **_actions, ls_t *ls)
 
 	assert(popParen(true));
 
-	*_patterns = xrealloc(patterns, sizeof(struct pattern) * count);
-	*_actions = actions ? xrealloc(actions, sizeof(struct die) * count) : NULL;
+	*_patterns = xrealloc(patterns, sizeof(struct Pattern) * count);
+	*_actions = actions ? xrealloc(actions, sizeof(struct Die) * count) : NULL;
 
 	return count;
 }
@@ -571,7 +571,7 @@ int _parse_matches(struct pattern **_patterns, struct die **_actions, ls_t *ls)
 /** Iteratively parses every postfix unary operator.
 	left is optional and represents the expression the postfix is applied to.
 	Mutually recurses with _parse_expr() to parse parenthesized expressions. */
-static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
+static inline struct Die *_parse_pexpr(struct Die *left, ls_t *ls)
 {
 	if(!left)
 		left = _parse_atom(ls);
@@ -611,29 +611,29 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 				if(bust > of)
 					errf("Invalid selection value: '%u/%u/%u'", sel, of, bust);
 
-				left = d_clone((struct die){ .op = op, .select= { .v = left, .of = of, .sel = sel, .bust = bust } });
+				left = d_clone((struct Die){ .op = op, .select= { .v = left, .of = of, .sel = sel, .bust = bust } });
 			}
 			continue;
 
 			case '!':
-				left = d_clone((struct die){ .op = op, .unop = left });
+				left = d_clone((struct Die){ .op = op, .unop = left });
 			continue;
 
 			case '$':
 				if(lexm(INT))
-					left = d_clone((struct die){ .op = op, .explode = { .v = left, .rounds = ls->num } });
+					left = d_clone((struct Die){ .op = op, .explode = { .v = left, .rounds = ls->num } });
 				else
-					left = d_clone((struct die){ .op = op, .explode = { .v = left, .rounds = 1 } });
+					left = d_clone((struct Die){ .op = op, .explode = { .v = left, .rounds = 1 } });
 			continue;
 
 			case '\\':
 			case '~':
-				left = d_clone((struct die){ .op = op, .reroll = { .v = left, .set = _parse_set(ls) } });
+				left = d_clone((struct Die){ .op = op, .reroll = { .v = left, .set = _parse_set(ls) } });
 			continue;
 
 			case '[':
 			{
-				struct die *d = d_clone((struct die){ .op = '[', .match =  { .v = left } });
+				struct Die *d = d_clone((struct Die){ .op = '[', .match =  { .v = left } });
 
 				d->match.cases = _parse_matches(&d->match.patterns, &d->match.actions, ls);
 
@@ -650,10 +650,10 @@ static inline struct die *_parse_pexpr(struct die *left, ls_t *ls)
 
 /** Iteratively parses every infix binary operator.
 	Mutually recurses with _parse_pexpr() to parse parenthesized expressions. */
-static struct die *_parse_expr(ls_t *ls)
+static struct Die *_parse_expr(ls_t *ls)
 {
 	// the expression being constructed. Always a complete expression (i.e. not missing any leaves)
-	struct die *left = _parse_pexpr(NULL, ls);
+	struct Die *left = _parse_pexpr(NULL, ls);
 
 	for(;;)
 	{
@@ -665,8 +665,8 @@ static struct die *_parse_expr(ls_t *ls)
 			left = d_merge(left, op, _parse_pexpr(NULL, ls));
 		else if(op == ':' && left->op == '?')
 		{
-			struct die *c = left->biop.l;
-			struct die *t = left->biop.r;
+			struct Die *c = left->biop.l;
+			struct Die *t = left->biop.r;
 
 			left->op = ':';
 			left->ternary.cond = c;
@@ -674,7 +674,7 @@ static struct die *_parse_expr(ls_t *ls)
 			left->ternary.otherwise = _parse_pexpr(NULL, ls);
 		}
 		else if(op == ')' && popParen(false))
-			return d_clone((struct die){ .op = '(', .unop = left });
+			return d_clone((struct Die){ .op = '(', .unop = left });
 		else if((op == ']' || op == ';' || op == ':') && ls->parenDepth && (ls->parenStack & 1))
 		{
 			unlex();
@@ -687,10 +687,10 @@ static struct die *_parse_expr(ls_t *ls)
 
 #pragma endregion
 
-struct die *parse(const char *str)
+struct Die *parse(const char *str)
 {
 	ls_t ls = (ls_t){ .pos = str };
-	struct die *d = _parse_expr(&ls);
+	struct Die *d = _parse_expr(&ls);
 
 	if(ls.parenDepth)
 		_badtk(ls, (ls.parenStack & 1) ? ']' : ')', -1);

@@ -27,7 +27,7 @@ extern struct Settings
 		/** How often dice should be simulated, when mode is ROLL */
 		int rolls;
 		/** The distribution to compare dice against, when mode is PREDICT_COMP */
-		struct prob *compare;
+		struct Prob *compare;
 		/** The value to compare dice against, when mode is COMPARE */
 		int compareValue;
 	};

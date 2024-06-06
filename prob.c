@@ -12,7 +12,7 @@
 #include <string.h>
 
 
-#define CLEAN_BIOP(T, name) T name##s (struct prob l, struct prob r) {\
+#define CLEAN_BIOP(T, name) T name##s (struct Prob l, struct Prob r) {\
 	T res = name(l,r); p_free(l); if(l.p != r.p) p_free(r); return res; }
 
 /* The highest value of p */
@@ -108,12 +108,12 @@ static int *chooseBuf(int N)
 	return buf;
 }
 
-double pt_hit(struct patternProb pt, int v)
+double pt_hit(struct PatternProb pt, int v)
 {
 	if(!pt.op)
 		return set_has(pt.set, v) ? 1.0 : 0.0;
 
-	const struct prob q = P_CONST(v);
+	const struct Prob q = P_CONST(v);
 
 	switch(pt.op)
 	{
@@ -138,7 +138,7 @@ double pt_hit(struct patternProb pt, int v)
 	}
 }
 
-double p_sum(struct prob p)
+double p_sum(struct Prob p)
 {
 	double sum = 0;
 
@@ -150,7 +150,7 @@ double p_sum(struct prob p)
 
 /** The total sum of a probability function.
 	i.e. 1 is axiom (1) holds. */
-double p_norms(struct prob *p)
+double p_norms(struct Prob *p)
 {
 	double sum = p_sum(*p);
 
@@ -163,9 +163,9 @@ double p_norms(struct prob *p)
 	return sum;
 }
 
-struct prob pt_probs(struct patternProb pt, struct prob *p)
+struct Prob pt_probs(struct PatternProb pt, struct Prob *p)
 {
-	struct prob q = {
+	struct Prob q = {
 		.low = p->low,
 		.len = p->len,
 		.p = malloc(p->len * sizeof(double))
@@ -186,7 +186,7 @@ struct prob pt_probs(struct patternProb pt, struct prob *p)
 
 }
 
-double probof(struct prob p, signed int num)
+double probof(struct Prob p, signed int num)
 {
 	if(num >= p.low && num < p.low + p.len)
 		return p.p[num - p.low];
@@ -195,7 +195,7 @@ double probof(struct prob p, signed int num)
 }
 
 /* Creates a uniform distribution of the range 1..n (inclusive), or n..-1 if n < 0. */
-struct prob p_uniform(int n)
+struct Prob p_uniform(int n)
 {
 	assert(n != 0);
 	int l = abs(n);
@@ -204,14 +204,14 @@ struct prob p_uniform(int n)
 	for (int i = 0; i < l; i++)
 		p[i] = 1.0 / l;
 
-	return (struct prob){
+	return (struct Prob){
 		.len = l,
 		.low = n < 0 ? n : 1,
 		.p = p
 	};
 }
 
-struct prob p_negs(struct prob p)
+struct Prob p_negs(struct Prob p)
 {
 	for (int i = 0; i < p.len / 2; i++)
 	{
@@ -226,44 +226,44 @@ struct prob p_negs(struct prob p)
 	return p;
 }
 
-struct prob p_dup(struct prob p)
+struct Prob p_dup(struct Prob p)
 {
 	double *pp = xmalloc(p.len * sizeof(double));
 	memcpy(pp, p.p, p.len * sizeof(double));
 
-	return (struct prob){
+	return (struct Prob){
 		.len = p.len,
 		.low = p.low,
 		.p = pp
 	};
 }
 
-struct prob p_constant(int val)
+struct Prob p_constant(int val)
 {
 	double *p = xmalloc(sizeof(double));
 
 	*p = 1.0;
 
-	return (struct prob){
+	return (struct Prob){
 		.len = 1,
 		.low = val,
 		.p = p
 	};
 }
 
-void p_free(struct prob p)
+void p_free(struct Prob p)
 {
 	free(p.p);
 }
 
-void pp_free(struct patternProb pp)
+void pp_free(struct PatternProb pp)
 {
 	if(pp.op)
 		p_free(pp.prob);
 	// set is aliased in AST
 }
 
-double p_has(struct prob p, struct set set)
+double p_has(struct Prob p, struct Set set)
 {
 	if(!set_hasAny(set, p.low, p_h(p)))
 		return 0.0;
@@ -281,7 +281,7 @@ double p_has(struct prob p, struct set set)
 	return prr;
 }
 
-struct prob p_rerolls(struct prob p, struct set set)
+struct Prob p_rerolls(struct Prob p, struct Set set)
 {
 	double prr = p_has(p, set);
 
@@ -294,7 +294,7 @@ struct prob p_rerolls(struct prob p, struct set set)
 	return p;
 }
 
-struct prob p_sans(struct prob p, struct set set)
+struct Prob p_sans(struct Prob p, struct Set set)
 {
 	double prr = p_has(p, set);
 	int start = 0, end = 0;
@@ -336,7 +336,7 @@ struct prob p_sans(struct prob p, struct set set)
 	return p;
 }
 
-struct prob p_add(struct prob l, struct prob r)
+struct Prob p_add(struct Prob l, struct Prob r)
 {
 	int high = l.low + r.low + l.len + r.len - 2;
 	int low = l.low + r.low;
@@ -348,23 +348,23 @@ struct prob p_add(struct prob l, struct prob r)
 		for (int j = 0; j < r.len; j++)
 			p[i + j] += l.p[i] * r.p[j];
 
-	return (struct prob){
+	return (struct Prob){
 		.len = len,
 		.low = low,
 		.p = p
 	};
 }
 
-CLEAN_BIOP(struct prob, p_add)
+CLEAN_BIOP(struct Prob, p_add)
 
 /** @return The smallest negative (farthest to 0) possible value in p */
-static inline signed int negMin(struct prob p)
+static inline signed int negMin(struct Prob p)
 {
 	return p.low >= 0 ? 0 : p.low;
 }
 
 /** @return The largest negative (closest to 0) possible value in p */
-static inline signed int negMax(struct prob p)
+static inline signed int negMax(struct Prob p)
 {
 	int h = p_h(p);
 
@@ -384,7 +384,7 @@ static inline signed int negMax(struct prob p)
 }
 
 /** @return The smallest positive (closest to 0) possible value in p */
-static inline signed int posMin(struct prob p)
+static inline signed int posMin(struct Prob p)
 {
 	if(p.low > 0)
 		return p.low;
@@ -404,13 +404,13 @@ static inline signed int posMin(struct prob p)
 }
 
 /** @return The largest positive (farthest from 0) possible value in p */
-static inline signed int posMax(struct prob p)
+static inline signed int posMax(struct Prob p)
 {
 	int h = p_h(p);
 	return h <= 0 ? 0 : h;
 }
 
-struct prob p_cmul(struct prob l, struct prob r)
+struct Prob p_cmul(struct Prob l, struct Prob r)
 {
 	bool lZ = probof(l, 0) > 0, rZ = probof(r, 0) > 0;
 	int lNL = negMin(l), lNH = negMax(l), lPL = posMin(l), lPH = posMax(l);
@@ -447,12 +447,12 @@ struct prob p_cmul(struct prob l, struct prob r)
 		for (int j = 0; j < r.len; j++)
 			p[(i + l.low) * (j + r.low) - lo] += l.p[i] * r.p[j];
 
-	return (struct prob){ .low = lo, .len = len, .p = p };
+	return (struct Prob){ .low = lo, .len = len, .p = p };
 }
 
-CLEAN_BIOP(struct prob, p_cmul)
+CLEAN_BIOP(struct Prob, p_cmul)
 
-struct prob p_cdiv(struct prob l, struct prob r)
+struct Prob p_cdiv(struct Prob l, struct Prob r)
 {
 	bool lZ = probof(l, 0) > 0;
 	int lNL = negMin(l), lNH = negMax(l), lPL = posMin(l), lPH = posMax(l);
@@ -513,13 +513,13 @@ struct prob p_cdiv(struct prob l, struct prob r)
 			p[i] /= 1.0 - discarded;
 	}
 
-	return (struct prob){ .low = lo, .len = len, .p = p };
+	return (struct Prob){ .low = lo, .len = len, .p = p };
 }
 
-CLEAN_BIOP(struct prob, p_cdiv)
+CLEAN_BIOP(struct Prob, p_cdiv)
 
 /* Internal implementation of p_mul. Inconsistent on being in-place or not. */
-static struct prob _p_mulk(struct prob p, signed int x)
+static struct Prob _p_mulk(struct Prob p, signed int x)
 {
 	if(x == 0)
 		return p_constant(0);
@@ -530,12 +530,12 @@ static struct prob _p_mulk(struct prob p, signed int x)
 	if(x < 0)
 		return p_negs(_p_mulk(p, -x));
 
-	struct prob v = _p_mulk(p, x/2);
+	struct Prob v = _p_mulk(p, x/2);
 	v = ((v.p == p.p) ? p_add : p_adds)(v, v);
 
 	if(x % 2)
 	{
-		struct prob _v = v;
+		struct Prob _v = v;
 		v = p_add(v, p);
 		p_free(_v);
 	}
@@ -543,10 +543,10 @@ static struct prob _p_mulk(struct prob p, signed int x)
 	return v;
 }
 
-struct prob p_mulk(struct prob p, signed int x)
+struct Prob p_mulk(struct Prob p, signed int x)
 {
-	struct prob _p = p_dup(p);
-	struct prob r = _p_mulk(_p, x);
+	struct Prob _p = p_dup(p);
+	struct Prob r = _p_mulk(_p, x);
 
 	if(r.p != _p.p)
 		p_free(_p);
@@ -554,9 +554,9 @@ struct prob p_mulk(struct prob p, signed int x)
 	return r;
 }
 
-struct prob p_mulks(struct prob p, signed int x)
+struct Prob p_mulks(struct Prob p, signed int x)
 {
-	struct prob r = _p_mulk(p, x);
+	struct Prob r = _p_mulk(p, x);
 
 	if(r.p != p.p)
 		p_free(p);
@@ -564,7 +564,7 @@ struct prob p_mulks(struct prob p, signed int x)
 	return r;
 }
 
-struct prob p_merge(struct prob l, struct prob r, double q)
+struct Prob p_merge(struct Prob l, struct Prob r, double q)
 {
 	int low = min(l.low, r.low);
 	int high = max(l.low + l.len, r.low + r.len) - 1;
@@ -577,12 +577,12 @@ struct prob p_merge(struct prob l, struct prob r, double q)
 	for (int i = 0; i < r.len; i++)
 		p[i + r.low - low] += r.p[i] * q;
 
-	return (struct prob){ .low = low, .len = len, .p = p };
+	return (struct Prob){ .low = low, .len = len, .p = p };
 }
 
-struct prob p_merges(struct prob l, struct prob r, double q)
+struct Prob p_merges(struct Prob l, struct Prob r, double q)
 {
-	struct prob res = p_merge(l, r, q);
+	struct Prob res = p_merge(l, r, q);
 	p_free(l);
 
 	if(l.p != r.p)
@@ -591,14 +591,14 @@ struct prob p_merges(struct prob l, struct prob r, double q)
 	return res;
 }
 
-struct prob p_muls(struct prob l, struct prob r)
+struct Prob p_muls(struct Prob l, struct Prob r)
 {
-	struct prob sum = { };
+	struct Prob sum = { };
 
 	for (int i = 0; i < l.len; i++)
 	{
-		struct prob cur = p_mulk(r, i + l.low);
-		sum = p_merges(i ? sum : ((struct prob){ .low = cur.low }), cur, l.p[i]);
+		struct Prob cur = p_mulk(r, i + l.low);
+		sum = p_merges(i ? sum : ((struct Prob){ .low = cur.low }), cur, l.p[i]);
 	}
 
 	p_free(l);
@@ -609,7 +609,7 @@ struct prob p_muls(struct prob l, struct prob r)
 	return sum;
 }
 
-struct prob p_selectsOne(struct prob p, int of, bool selHigh)
+struct Prob p_selectsOne(struct Prob p, int of, bool selHigh)
 {
 	assert(of > 0);
 
@@ -645,14 +645,14 @@ struct prob p_selectsOne(struct prob p, int of, bool selHigh)
 	#undef choose
 }
 
-void p_incr(struct prob *p, struct prob q)
+void p_incr(struct Prob *p, struct Prob q)
 {
-	struct prob r = p_add(*p, q);
+	struct Prob r = p_add(*p, q);
 	p_free(*p);
 	*p = r;
 }
 
-struct prob p_selects(struct prob p, int sel, int of, bool selHigh, bool explode)
+struct Prob p_selects(struct Prob p, int sel, int of, bool selHigh, bool explode)
 {
 	// Use the MUCH faster selectOne algorithm (O(n) vs O(n!)
 	if(sel == 1 && !explode)
@@ -666,10 +666,10 @@ struct prob p_selects(struct prob p, int sel, int of, bool selHigh, bool explode
 	int *v = xcalloc(of, sizeof(int));
 	int low = sel * p.low + (of/EXPLODE_RATIO)*(explode && p.low < 0 ? p.low : 0);
 	int high = (sel + explode*of/EXPLODE_RATIO) * p_h(p);
-	struct prob c = (struct prob){ .len = high - low + 1, .low = low };
+	struct Prob c = (struct Prob){ .len = high - low + 1, .low = low };
 	c.p = xcalloc(c.len, sizeof(double));
 
-	struct prob hitV = p_constant(0);
+	struct Prob hitV = p_constant(0);
 	int critC = 0;
 
 	do
@@ -711,14 +711,14 @@ struct prob p_selects(struct prob p, int sel, int of, bool selHigh, bool explode
 	return c;
 }
 
-struct prob p_selects_bust(struct prob p, int sel, int of, int bust, bool explode)
+struct Prob p_selects_bust(struct Prob p, int sel, int of, int bust, bool explode)
 {
 	assert(sel > 0 && sel <= of);
 	assert(bust > 0 && bust <= of);
 	assert(p.len > 0);
 
 	const int bustV = p.low - 1;
-	struct prob total = p_constant(bustV);
+	struct Prob total = p_constant(bustV);
 
 	if(p.len == 1)
 		return total;
@@ -726,7 +726,7 @@ struct prob p_selects_bust(struct prob p, int sel, int of, int bust, bool explod
 	int *const choose = chooseBuf(of);
 	const double p1 = *p.p;
 	// p without 1s
-	const struct prob p2 = p_sans(p, SINGLETON(p.low, p.low));
+	const struct Prob p2 = p_sans(p, SINGLETON(p.low, p.low));
 
 	// range over # of 1s
 	for (int n = 0; n < bust; n++)
@@ -737,7 +737,7 @@ struct prob p_selects_bust(struct prob p, int sel, int of, int bust, bool explod
 		int left = of - n;
 
 		// value distribution for that amount of 1s
-		struct prob vals = p_selects(p_dup(p2), min(sel, left), left, true, explode);
+		struct Prob vals = p_selects(p_dup(p2), min(sel, left), left, true, explode);
 
 		// pad selection with 1s
 		if(sel > left)
@@ -754,7 +754,7 @@ struct prob p_selects_bust(struct prob p, int sel, int of, int bust, bool explod
 	return total;
 }
 
-struct prob p_cuts(struct prob p, int l, int r)
+struct Prob p_cuts(struct Prob p, int l, int r)
 {
 	for (; p.p[l] <= 0.0; l++)
 		;
@@ -762,7 +762,7 @@ struct prob p_cuts(struct prob p, int l, int r)
 	if(l == p.len)
 	{
 		p_free(p);
-		return (struct prob){ p.low, 0, NULL };
+		return (struct Prob){ p.low, 0, NULL };
 	}
 
 	for (; p.p[p.len - r - 1] <= 0.0; r++)
@@ -781,12 +781,12 @@ struct prob p_cuts(struct prob p, int l, int r)
 	return p;
 }
 
-struct prob p_explodes(struct prob p)
+struct Prob p_explodes(struct Prob p)
 {
 	assert(p.len > 1);
 
-	struct prob exp = p_add(p, P_CONST(p_h(p)));
-	struct prob imp = p_adds(p_constant(p.low), p_negs(p_dup(p)));
+	struct Prob exp = p_add(p, P_CONST(p_h(p)));
+	struct Prob imp = p_adds(p_constant(p.low), p_negs(p_dup(p)));
 	double Pmin = p.p[0];
 	double Pmax = p.p[p.len - 1];
 
@@ -799,7 +799,7 @@ struct prob p_explodes(struct prob p)
 	return p_merges(p_merges(p, exp, Pmax), imp, Pmin);
 }
 
-struct prob p_bool(double prob)
+struct Prob p_bool(double prob)
 {
 	if(prob == 0)
 		return p_constant(0);
@@ -807,7 +807,7 @@ struct prob p_bool(double prob)
 		return p_constant(1);
 	else
 	{
-		struct prob p = (struct prob){ .len = 2, .low = 0, .p = xmalloc(2 * sizeof(double)) };
+		struct Prob p = (struct Prob){ .len = 2, .low = 0, .p = xmalloc(2 * sizeof(double)) };
 		p.p[1] = prob;
 		p.p[0] = 1 - p.p[1];
 		return p;
@@ -815,7 +815,7 @@ struct prob p_bool(double prob)
 }
 
 /* P(x >= k) */
-static double p_geqK(struct prob x, int k)
+static double p_geqK(struct Prob x, int k)
 {
 	double pgt = 0;
 
@@ -827,7 +827,7 @@ static double p_geqK(struct prob x, int k)
 }
 
 /* P(l <= r) */
-double p_leq(struct prob l, struct prob r)
+double p_leq(struct Prob l, struct Prob r)
 {
 	double prob = 0.0;
 
@@ -839,7 +839,7 @@ double p_leq(struct prob l, struct prob r)
 
 CLEAN_BIOP(double, p_leq)
 
-double p_eq(struct prob l, struct prob r)
+double p_eq(struct Prob l, struct Prob r)
 {
 	double prob = 0.0;
 
@@ -852,7 +852,7 @@ double p_eq(struct prob l, struct prob r)
 CLEAN_BIOP(double, p_eq)
 
 /* P(x > 0) */
-static double p_true(struct prob x)
+static double p_true(struct Prob x)
 {
 	double prob = 0;
 
@@ -862,7 +862,7 @@ static double p_true(struct prob x)
 	return prob;
 }
 
-struct prob p_coalesces(struct prob l, struct prob r)
+struct Prob p_coalesces(struct Prob l, struct Prob r)
 {
 	if(l.low > 0)
 	{
@@ -882,7 +882,7 @@ struct prob p_coalesces(struct prob l, struct prob r)
 	return p_merges(p_cuts(l, drop, 0), r, 1 - p);
 }
 
-struct prob p_scales(struct prob p, double k)
+struct Prob p_scales(struct Prob p, double k)
 {
 	assert(k > 0);
 
@@ -892,7 +892,7 @@ struct prob p_scales(struct prob p, double k)
 	return p;
 }
 
-struct prob p_terns(struct prob cond, struct prob then, struct prob otherwise)
+struct Prob p_terns(struct Prob cond, struct Prob then, struct Prob otherwise)
 {
 	double p = p_true(cond);
 	p_free(cond);
@@ -911,7 +911,7 @@ struct prob p_terns(struct prob cond, struct prob then, struct prob otherwise)
 	return p_merges(p_scales(then, p), otherwise, 1 - p);
 }
 
-struct prob p_explode_ns(const struct prob p, int n)
+struct Prob p_explode_ns(const struct Prob p, int n)
 {
 	assert(p.len > 1);
 	assert(n > 0);
@@ -920,23 +920,23 @@ struct prob p_explode_ns(const struct prob p, int n)
 	double pMax = p.p[p.len - 1];
 
 	// Axiom (1) gets restored over the loop
-	struct prob res = p_dup((struct prob){ .len = p.len - 1, .low = p.low, .p = p.p });
+	struct Prob res = p_dup((struct Prob){ .len = p.len - 1, .low = p.low, .p = p.p });
 	double pCur = pMax;
 
 	for (int i = 1; i < n; i++, pCur *= pMax)
 	{
-		struct prob cur = p_merge(res, (struct prob){ .len = p.len - 1, .low = p.low + max * i, .p = p.p }, pCur);
+		struct Prob cur = p_merge(res, (struct Prob){ .len = p.len - 1, .low = p.low + max * i, .p = p.p }, pCur);
 		p_free(res);
 		res = cur;
 	}
 
 	// final round without cutting off the maximum. Effectively cut off the converging infinite series, restoring Axiom (1)
-	return p_merges(res, (struct prob){ .len = p.len, .low = p.low + max * n, .p = p.p }, pCur);
+	return p_merges(res, (struct Prob){ .len = p.len, .low = p.low + max * n, .p = p.p }, pCur);
 }
 
-struct prob p_maxs(struct prob l, struct prob r)
+struct Prob p_maxs(struct Prob l, struct Prob r)
 {
-	struct prob res;
+	struct Prob res;
 	res.low = max(l.low, r.low);
 	res.len = max(p_h(l), p_h(r)) - res.low + 1;
 	res.p = xcalloc(res.len, sizeof(double));
@@ -970,9 +970,9 @@ struct prob p_maxs(struct prob l, struct prob r)
 }
 
 /* Emulates rolling on l and r, then selecting the lower value. In-place. */
-struct prob p_mins(struct prob l, struct prob r)
+struct Prob p_mins(struct Prob l, struct Prob r)
 {
-	struct prob res;
+	struct Prob res;
 	res.low = min(l.low, r.low);
 	res.len = min(p_h(l), p_h(r)) - res.low + 1;
 	res.p = xcalloc(res.len, sizeof(double));
@@ -1005,11 +1005,11 @@ struct prob p_mins(struct prob l, struct prob r)
 	return res;
 }
 
-struct prob p_dies(struct prob p)
+struct Prob p_dies(struct Prob p)
 {
 	assert(p.len >= 1);
 
-	struct prob sum = p_scales(p_uniform(p.low), p.p[0]);
+	struct Prob sum = p_scales(p_uniform(p.low), p.p[0]);
 
 	for (int i = 1; i < p.len; i++)
 	{

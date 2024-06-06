@@ -15,7 +15,7 @@
 	@param x The key to seek for
 	@returns A pointer to the range segment containing x, or NULL if there is no such segment
 */
-static struct range *_set_find(size_t n, struct range entries[n], signed int x, struct range **lo, struct range **hi)
+static struct Range *_set_find(size_t n, struct Range entries[n], signed int x, struct Range **lo, struct Range **hi)
 {
 	if(n == 0)
 		return NULL;
@@ -47,7 +47,7 @@ static struct range *_set_find(size_t n, struct range entries[n], signed int x, 
 	@param hi THe index of the rightmost range
 	@returns A pointer to the merged range segment
  */
-static struct range *_set_merge(struct set *s, size_t lo, size_t hi)
+static struct Range *_set_merge(struct Set *s, size_t lo, size_t hi)
 {
 	assert(hi >= lo);
 
@@ -55,9 +55,9 @@ static struct range *_set_merge(struct set *s, size_t lo, size_t hi)
 	{
 		s->entries[lo].end = s->entries[hi].end;
 
-		memmove(s->entries + lo + 1, s->entries + hi + 1, sizeof(struct range) * (s->length - hi - 1));
+		memmove(s->entries + lo + 1, s->entries + hi + 1, sizeof(struct Range) * (s->length - hi - 1));
 		s->length -= hi - lo;
-		s->entries = xrealloc(s->entries, sizeof(struct range) * s->length);
+		s->entries = xrealloc(s->entries, sizeof(struct Range) * s->length);
 	}
 
 	return s->entries + lo;
@@ -70,11 +70,11 @@ static struct range *_set_merge(struct set *s, size_t lo, size_t hi)
 	@param end The end parameter of the range to add
 	@returns A pointer to the new range segment
 */
-static struct range *_set_add(struct set *s, size_t spl, int start, int end)
+static struct Range *_set_add(struct Set *s, size_t spl, int start, int end)
 {
-	s->entries = xrealloc(s->entries, (s->length + 1) * sizeof(struct range));
+	s->entries = xrealloc(s->entries, (s->length + 1) * sizeof(struct Range));
 
-	memmove(s->entries + spl + 1, s->entries + spl, (s->length - spl) * sizeof(struct range));
+	memmove(s->entries + spl + 1, s->entries + spl, (s->length - spl) * sizeof(struct Range));
 
 	s->length++;
 
@@ -90,7 +90,7 @@ static struct range *_set_add(struct set *s, size_t spl, int start, int end)
 	@param start The end parameter of the range
 	@returns The r input pointer
 */
-static struct range *_set_adjust(struct range *r, signed int start, signed int end)
+static struct Range *_set_adjust(struct Range *r, signed int start, signed int end)
 {
 	if(start < r->start)
 		r->start = start;
@@ -103,7 +103,7 @@ static struct range *_set_adjust(struct range *r, signed int start, signed int e
 #pragma endregion
 
 
-void set_insert(struct set *s, signed int start, signed int end)
+void set_insert(struct Set *s, signed int start, signed int end)
 {
 	// the highest and lowest indices that are fully left/right the given range
 	size_t leftHi = leftHi;
@@ -117,7 +117,7 @@ void set_insert(struct set *s, signed int start, signed int end)
 	// do a linear search for simplicity
 	for (size_t i = 0; i < s->length; i++)
 	{
-		struct range e = s->entries[i];
+		struct Range e = s->entries[i];
 
 		if(e.end < start - 1)
 		{
@@ -153,27 +153,27 @@ void set_insert(struct set *s, signed int start, signed int end)
 		_set_add(s, 0, start, end);
 }
 
-void set_free(struct set set)
+void set_free(struct Set set)
 {
 	free(set.entries);
 }
 
-bool set_hasAll(struct set s, signed int start, signed int end)
+bool set_hasAll(struct Set s, signed int start, signed int end)
 {
 	if(s.negated)
-		return !set_hasAny((struct set){ s.entries, s.length, false }, start, end);
+		return !set_hasAny((struct Set){ s.entries, s.length, false }, start, end);
 
-	struct range *hit = _set_find(s.length, s.entries, start, NULL, NULL);
+	struct Range *hit = _set_find(s.length, s.entries, start, NULL, NULL);
 
 	return hit && (end <= hit->end || hit == _set_find(s.length, s.entries, end, NULL, NULL));
 }
 
-bool set_hasAny(struct set s, signed int start, signed int end)
+bool set_hasAny(struct Set s, signed int start, signed int end)
 {
 	if(s.negated)
-		return !set_hasAll((struct set){ s.entries, s.length, false }, start, end);
+		return !set_hasAll((struct Set){ s.entries, s.length, false }, start, end);
 
-	struct range *lo = NULL, *hi = NULL;
+	struct Range *lo = NULL, *hi = NULL;
 
 	if(_set_find(s.length, s.entries, start, &lo, NULL) || _set_find(s.length, s.entries, end, NULL, &hi))
 		return true;
@@ -192,12 +192,12 @@ bool set_hasAny(struct set s, signed int start, signed int end)
 		return s.length;
 }
 
-bool set_empty(struct set set)
+bool set_empty(struct Set set)
 {
 	return set.length == 0;
 }
 
-void set_print(struct set s)
+void set_print(struct Set s)
 {
 	if(s.negated)
 		putchar('!');
@@ -207,7 +207,7 @@ void set_print(struct set s)
 		if(i)
 			putchar(',');
 
-		struct range r = s.entries[i];
+		struct Range r = s.entries[i];
 
 		if(r.start == r.end)
 			printf("%d", r.start);

@@ -3,6 +3,6 @@
 #include "ast.h"
 
 
-void pt_free(struct pattern pt);
-void pt_print(struct pattern p);
-void pt_freeD(struct pattern *p);
+void pt_free(struct Pattern pt);
+void pt_print(struct Pattern p);
+void pt_freeD(struct Pattern *p);

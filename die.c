@@ -8,10 +8,10 @@
 #include <string.h>
 
 
-CLONE(d_clone, struct die)
-FREE_P(d_free, struct die)
+CLONE(d_clone, struct Die)
+FREE_P(d_free, struct Die)
 
-void d_free(struct die d)
+void d_free(struct Die d)
 {
 	if(strchr(BIOPS, d.op))
 	{
@@ -44,7 +44,7 @@ void d_free(struct die d)
 	}
 }
 
-bool d_boolean(struct die *d)
+bool d_boolean(struct Die *d)
 {
 	switch(d->op)
 	{
@@ -59,7 +59,7 @@ bool d_boolean(struct die *d)
 	}
 }
 
-void d_print(struct die *d)
+void d_print(struct Die *d)
 {
 	switch(d->op)
 	{
@@ -188,7 +188,7 @@ static void printIndent(int depth)
 		printf("|   ");
 }
 
-void d_printTree(struct die *d, int depth)
+void d_printTree(struct Die *d, int depth)
 {
 	printIndent(depth);
 
@@ -313,7 +313,7 @@ void d_printTree(struct die *d, int depth)
 	}
 }
 
-struct prob translate(struct prob *ctx, const struct die *d)
+struct Prob translate(struct Prob *ctx, const struct Die *d)
 {
 	switch(d->op)
 	{
@@ -397,20 +397,20 @@ struct prob translate(struct prob *ctx, const struct die *d)
 
 		case '[':
 		{
-			struct prob running = translate(ctx, d->match.v);
-			struct prob result = {};
+			struct Prob running = translate(ctx, d->match.v);
+			struct Prob result = {};
 
 			for (int i = 0; i < d->match.cases; i++)
 			{
-				struct patternProb pt = pt_translate(ctx, d->match.patterns[i]);
-				struct prob hit = pt_probs(pt, &running);
+				struct PatternProb pt = pt_translate(ctx, d->match.patterns[i]);
+				struct Prob hit = pt_probs(pt, &running);
 				pp_free(pt);
 				
 				double pHit = p_norms(&hit);
 
 				if(d->match.actions && pHit > 0.0)
 				{
-					struct prob action = translate(&hit, d->match.actions + i);
+					struct Prob action = translate(&hit, d->match.actions + i);
 					result = p_merges(result, action, pHit);
 				}
 				else
@@ -436,9 +436,9 @@ struct prob translate(struct prob *ctx, const struct die *d)
 	}
 }
 
-struct patternProb pt_translate(struct prob *ctx, struct pattern p)
+struct PatternProb pt_translate(struct Prob *ctx, struct Pattern p)
 {
-	struct patternProb pp = { .op = p.op };
+	struct PatternProb pp = { .op = p.op };
 
 	if(p.op)
 		pp.prob = translate(ctx, &p.die);
