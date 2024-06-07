@@ -1,6 +1,7 @@
 #include "set.h"
 #include "util.h"
 #include <assert.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -201,7 +202,13 @@ void set_print(struct Set s)
 
 		struct Range r = s.entries[i];
 
-		if(r.start == r.end)
+		if(r.start == INT_MIN && r.end == INT_MAX)
+			putchar('*');
+		else if(r.start == INT_MIN)
+			printf("*-%d", r.end);
+		else if(r.end == INT_MAX)
+			printf("%d-*", r.start);
+		else if(r.start == r.end)
 			printf("%d", r.start);
 		else
 			printf("%d-%d", r.start, r.end);
