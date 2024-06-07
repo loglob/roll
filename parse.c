@@ -118,10 +118,14 @@ const char *tkstr(char tk)
 }
 
 /** Like _badtk, but accepts strings instead of chars. An empty string encodes the NUL token. */
-static void _badtks(ls_t ls, const char *first, ...)
+static void _badtks(ls_t ls, __attribute__((unused)) const char *func, __attribute__((unused)) int line, const char *first, ...)
 {
 	va_list vl;
 	va_start(vl, first);
+
+#ifndef NDEBUG
+	fprintf(stderr, "In %s() at parse.c:%u: ", func, line);
+#endif
 
 	fprintf(stderr, "Error at %.5s: Bad Token: Didn't expect %s; expected ", ls.err, tkstr(ls.last));
 
@@ -153,7 +157,7 @@ static void _badtks(ls_t ls, const char *first, ...)
 }
 
 /** Prints an error message, describing that a token isn't in the given list of expected tokens. */
-static void _badtk(ls_t ls, int first, ...)
+static void _badtk(ls_t ls, const char *func, int line, int first, ...)
 {
 	va_list vl;
 	va_start(vl, first);
@@ -173,17 +177,17 @@ static void _badtk(ls_t ls, int first, ...)
 	*b = 0;
 
 	if(nul && b != buf)
-		_badtks(ls, buf, "", NULL);
+		_badtks(ls, func, line, buf, "", NULL);
 	else
-		_badtks(ls, buf, NULL);
+		_badtks(ls,func, line,  buf, NULL);
 }
 
 
 #define _LS *ls
 #define lerrf(ls, fmt, ...) eprintf("Error at %.5s: " fmt "\n", (ls).err, ##__VA_ARGS__)
 #define errf(fmt, ...) lerrf(_LS, fmt, ##__VA_ARGS__)
-#define badtk(...) _badtk(_LS, __VA_ARGS__, -1)
-#define badtks(...) _badtks(_LS, __VA_ARGS__, NULL)
+#define badtk(...) _badtk(_LS, __FUNCTION__, __LINE__, __VA_ARGS__, -1)
+#define badtks(...) _badtks(_LS, __FUNCTION__, __LINE__, __VA_ARGS__, NULL)
 
 #pragma endregion
 
@@ -716,7 +720,7 @@ struct Die *parse(const char *str)
 	struct Die *d = _parse_expr(&ls);
 
 	if(ls.parenDepth)
-		_badtk(ls, (ls.parenStack & 1) ? ']' : ')', -1);
+		_badtk(ls, __FILE__, __LINE__, (ls.parenStack & 1) ? ']' : ')', -1);
 
 	return d;
 }
