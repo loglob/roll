@@ -58,7 +58,28 @@ void pt_print(struct Pattern p)
 		d_print(&p.die);
 	}
 	else
+	{
+		if(p.set.negated)
+			putchar('!');
+
 		set_print(p.set.entries);
+		bool comma = !set_empty(p.set.entries);
+		
+		if(p.set.hasMin)
+		{
+			if(comma)
+				putchar(',');
+			putchar('_');
+			comma = true;
+		}
+
+		if(p.set.hasMax)
+		{
+			if(comma)
+				putchar(',');
+			putchar('^');
+		}
+	}
 }
 
 void d_print(const struct Die *d)
