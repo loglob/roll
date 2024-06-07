@@ -3,7 +3,30 @@
 #include "prob.h"
 #include "util.h"
 
-struct Prob translate(const struct Prob *ctx, const struct Die *d)
+struct ProbCtx initCtx(struct Prob p)
+{
+	if(p.len == 1)
+	{
+		p_free(p);
+
+		return CONST_CTX(p.low);
+	}
+	else
+	{
+		return (struct ProbCtx){
+			.prob = p,
+			.singleton = false
+		};
+	}
+}
+
+void freeCtx(struct ProbCtx ctx)
+{
+	if(!ctx.consumed)
+		p_free(ctx.prob);
+}
+
+struct Prob translate(struct ProbCtx *ctx, const struct Die *d)
 {
 	switch(d->op)
 	{
@@ -17,8 +40,14 @@ struct Prob translate(const struct Prob *ctx, const struct Die *d)
 		{
 			if(! ctx)
 				eprintf("Invalid die expression; '@' outside of match context\n");
-		
-			return p_dup(*ctx);
+			if(ctx->singleton)
+				return p_dup(P_CONST(ctx->val));
+			if(ctx->consumed)
+				eprintf("Invalid die expression; '@' uses non-linearly, i.e. twice in the same context\n");
+
+			ctx->consumed = true;
+
+			return ctx->prob;
 		}
 
 		case '(':
@@ -108,8 +137,12 @@ struct Prob translate(const struct Prob *ctx, const struct Die *d)
 
 				if(d->match.actions && pHit > 0.0)
 				{
-					struct Prob action = translate(&hit, d->match.actions + i);
+					struct ProbCtx newCtx = initCtx(hit);
+					
+					struct Prob action = translate(&newCtx, d->match.actions + i);
 					result = p_merges(result, action, pHit);
+
+					freeCtx(newCtx);
 				}
 				else
 					p_free(hit);
@@ -134,7 +167,7 @@ struct Prob translate(const struct Prob *ctx, const struct Die *d)
 	}
 }
 
-struct PatternProb pt_translate(const struct Prob *ctx, struct Pattern p)
+struct PatternProb pt_translate(struct ProbCtx *ctx, struct Pattern p)
 {
 	struct PatternProb pp = { .op = p.op };
 

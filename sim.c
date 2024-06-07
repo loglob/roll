@@ -45,8 +45,9 @@ static bool pt_matches(const int *ctx, struct Pattern p, const struct Die *d, in
 		{
 			if(!pBuf->p)
 			{
-				struct Prob c = P_CONST(ctx ? *ctx : 0);
-				*pBuf = translate(ctx ? &c : NULL, d);
+				struct ProbCtx cc = CONST_CTX(ctx ? *ctx : 0);
+				
+				*pBuf = translate(ctx ? &cc : NULL, d);
 			}
 
 			hit = (p.set.hasMin && pBuf->low == x) || (p.set.hasMax && p_h(*pBuf) == x);
@@ -58,8 +59,8 @@ static bool pt_matches(const int *ctx, struct Pattern p, const struct Die *d, in
 
 struct Range d_limits(const int *ctx, const struct Die *d)
 {
-	struct Prob c = P_CONST(ctx ? *ctx : -1);
-	struct Prob p = translate(ctx ? &c : NULL, d);
+	struct ProbCtx cc = CONST_CTX(ctx ? *ctx : 0);
+	struct Prob p = translate(ctx ? &cc : NULL, d);
 	p_free(p);
 
 	return (struct Range) {

@@ -733,7 +733,7 @@ struct Prob p_selects_bust(struct Prob p, int sel, int of, int bust, bool explod
 
 struct Prob p_cuts(struct Prob p, int l, int r)
 {
-	for (; p.p[l] <= 0.0; l++)
+	for (; p.p[l] <= 0.0 && l < p.len; l++)
 		;
 
 	if(l == p.len)
