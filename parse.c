@@ -579,7 +579,9 @@ int _parse_matches(struct Pattern **_patterns, struct Die **_actions, ls_t *ls)
 		count++;
 	} while(!lexm(']'));
 
-	assert(popParen(true));
+	__attribute__((unused))
+	bool pp = popParen(true);
+	assert(pp);
 
 	*_patterns = xrealloc(patterns, sizeof(struct Pattern) * count);
 	*_actions = actions ? xrealloc(actions, sizeof(struct Die) * count) : NULL;
