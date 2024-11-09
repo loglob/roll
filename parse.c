@@ -52,6 +52,7 @@ die := n
 	| die / die
 	| die + die
 	| die - die
+	| die // die
 	| die ^^ die
 	| die __ die
 	| die RELOP die
@@ -74,8 +75,8 @@ die := n
 
 #define SPECIAL OPS ",();]"
 
-static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=", "/=", "^$", "$^" };
-static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ, NEQ, UP_DOLLAR, DOLLAR_UP };
+static const char mtok_str[][3] = { "^^", "__", "^!", "<=", ">=", "/=", "^$", "$^", "//" };
+static const char mtok_chr[] = { UPUP, __, UP_BANG, LT_EQ, GT_EQ, NEQ, UP_DOLLAR, DOLLAR_UP, SLASH_SLASH };
 
 #define MAX_PAREN_DEPTH (sizeof(unsigned long long) * CHAR_BIT)
 
@@ -339,6 +340,7 @@ static int precedence(char op)
 		case '-':
 			return 4;
 		case '/':
+		case SLASH_SLASH:
 			return 2;
 		case '*':
 			return 2;

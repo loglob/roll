@@ -293,6 +293,32 @@ int sim(const int *ctx, const struct Die *d)
 			return sum;
 		}
 
+		case SLASH_SLASH:
+		{
+			int initial = sim(ctx, d->biop.l);
+			int cur = initial;
+			int n = 0;
+			bool warned = false;
+
+			while(cur > 0)
+			{
+				int dif = sim(ctx, d->biop.r);
+				if(settings.verbose)
+					printf("Running total of %d with next roll of %d\n", cur, dif);
+
+				if(dif <= 0 && !warned && settings.verbose)
+					printf("Warning: Use of // may not terminate\n");
+
+				cur -= dif;
+				++n;
+			}
+
+			if(settings.verbose)
+				printf("Reduced %d to %d in %d rolls\n", initial, cur, n);
+
+			return n;
+		}
+
 		case INT:
 		{
 			return d->constant;

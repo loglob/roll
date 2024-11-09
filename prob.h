@@ -185,3 +185,5 @@ struct Prob p_dies(struct Prob p);
 double p_norms(struct Prob *p);
 
 double p_sum(struct Prob p);
+
+struct Prob p_udivs(struct Prob l, struct Prob r);

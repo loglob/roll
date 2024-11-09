@@ -68,6 +68,9 @@ struct Prob translate(struct ProbCtx *ctx, const struct Die *d)
 		case '-':
 			return p_adds(translate(ctx, d->biop.l), p_negs(translate(ctx, d->biop.r)));
 
+		case SLASH_SLASH:
+			return p_udivs(translate(ctx, d->biop.l), translate(ctx, d->biop.r));
+
 		case '^':
 		case '_':
 		case DOLLAR_UP:

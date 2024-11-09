@@ -154,8 +154,8 @@ double p_sum(struct Prob p)
 	return sum;
 }
 
-/** The total sum of a probability function.
-	i.e. 1 is axiom (1) holds.
+/** Normalizes a probability to restore axiom (1)
+	@returns old total of distribution
  */
 double p_norms(struct Prob *p)
 {
@@ -996,6 +996,62 @@ struct Prob p_dies(struct Prob p)
 
 	p_free(p);
 	return sum;
+}
+
+/** Cuts every case `<= n` from `p` in-place. Re-normalizes.
+	@returns Probability to hit cut.
+ */
+static double p_cutLeq(struct Prob *p, int n)
+{
+	int c = 0;
+	double total = 0.0;
+
+	for (c = 0; c < p->len && (p->low + c) <= n; ++c)
+		total += p->p[c];
+
+	if(c > 0 && c < p->len)
+		*p = p_scales(p_cuts(*p, c, 0), 1.0 / (1.0 - total));
+
+	return total;
+}
+
+struct Prob p_udivs(struct Prob p, struct Prob q)
+{
+	if(q.low <= 0)
+		eprintf("Solution to uncached division is unbounded\n");
+	if(p_h(p) <= 0)
+		return p_constant(0);
+
+	unsigned n = p_h(p) / q.low + !!(p_h(p) % q.low);
+	double *out = xmalloc((1 + n) * sizeof(double));
+	double pCur = 1.0;
+
+	q = p_negs(q);
+
+	for (unsigned i = 0; i <= n; ++i)
+	{
+		double pCut = p_cutLeq(&p, 0);
+
+		out[i] = pCur * pCut;
+
+		if(pCut == 1.0)
+		{
+			assert(i + 1 == n);
+			break;
+		}
+
+		pCur *= 1.0 - pCut;
+
+
+		struct Prob pp = p_add(p, q);
+		p_free(p);
+		p = pp;
+	}
+
+	p_free(p);
+	p_free(q);
+
+	return p_cuts((struct Prob){ .len = n+1, .low = 0, .p = out }, 0, 0);
 }
 
 #undef CLEAN_BIOP

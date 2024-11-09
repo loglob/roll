@@ -136,6 +136,7 @@ void d_print(const struct Die *d)
 		case GT_EQ:
 		case '=':
 		case NEQ:
+		case SLASH_SLASH:
 			putchar('(');
 			d_print(d->biop.l);
 			printf(") %s (", tkstr(d->op));
@@ -287,7 +288,9 @@ void d_printTree(const struct Die *d, int depth)
 		b('-', "SUB")
 		b('x', "UNCACHED MUL")
 		b('*', "CACHED MUL")
+		b(SLASH_SLASH, "UNCACHED DIV")
 		b('/', "CACHED DIV")
+
 		b(UPUP, "MAXIMUM")
 		b(__, "MINIMUM")
 

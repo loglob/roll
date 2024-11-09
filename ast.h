@@ -25,10 +25,12 @@
 #define UP_DOLLAR '\xF6'
 // equivalent to (char)-11
 #define DOLLAR_UP '\xF5'
+// equivalent to (char)-12
+#define SLASH_SLASH '\xF4'
 /** All valid relational operators (also binary operators) */
 #define RELOPS "<>=\xF9\xF8\xF7"
 /** All valid binary operators */
-#define BIOPS "+-*x/?" RELOPS "\xFC\xFB"
+#define BIOPS "+-*x/?" RELOPS "\xFC\xFB\xF4"
 /** All valid unary operators */
 #define SELECT "^_\xFA\xF6\xF5"
 /** All valid reroll operators */

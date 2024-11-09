@@ -114,6 +114,7 @@ int main(int argc, char **argv)
 						"	D/D    Rolls on both dice, then divides the results.\n"
 						"	D+D    Adds the results of two dice.\n"
 						"	D-D    Subtracts the results of two dice.\n"
+						"	D//D   Uncached division, computes the number of rolls on the right side needed to reduce the left to 0 or below.\n"
 						"	D^^D   Rolls on both dice, then selects the higher result.\n"
 						"	D__D   Rolls on both dice, then selects the lower result.\n"
 						"	D>D    Rolls on both dice, then checks if left is larger than right.\n"
