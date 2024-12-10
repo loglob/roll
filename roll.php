@@ -25,7 +25,7 @@
 <button onclick="submit(false)"> Histogram </button>
 <br/>
 <?php
-	if(! isset($_GET['d'])) {
+	if(!isset($_GET['d']) || $_GET['d'] === '') {
 		$command = "./roll -h";
 	} else {
 		$die = escapeshellarg($_GET['d']);
@@ -37,8 +37,10 @@
 	}
 	echo "$command";
 	$output = shell_exec("$command 2>&1");
-	echo "<pre>$output</pre>";
+	echo "<pre style=\"font-size: 120%;\">$output</pre>";
 ?>
-
+<footer style="color: rgb(178, 172, 162); margin-top: 3em; font-size: 75%;">
+	roll is provided under the GPL-3.0 license without warranty. Source code is available <a href="https://github.com/loglob/roll">here</a>.
+</footer>
 </body>
 </html>
