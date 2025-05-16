@@ -1,9 +1,8 @@
 // set.h: Implements a set/bag for integers that permits ranges as primitives
 #pragma once
+#include "util.h"
 #include <stdbool.h>
 #include <stddef.h>
-
-#define PURE __attribute__((pure))
 
 /** A range segment.
 	Spans every integer between the given limits, inclusively.
@@ -56,7 +55,7 @@ void set_insert(struct Set *s, signed int start, signed int end);
 	@param end The end of the range
 	@returns Whether s contains any element between start and end, inclusive
  */
-bool set_hasAny(struct Set s, signed int start, signed int end) PURE;
+bool set_hasAny(struct Set s, signed int start, signed int end) PURE_ATTR;
 
 /** Determines if a set contains every element in a given range. O(log n)
 	@param s The set to test
@@ -64,7 +63,7 @@ bool set_hasAny(struct Set s, signed int start, signed int end) PURE;
 	@param end The end of the range
 	@returns Whether s contains every element between start and end, inclusive
  */
-bool set_hasAll(struct Set s, signed int start, signed int end) PURE;
+bool set_hasAll(struct Set s, signed int start, signed int end) PURE_ATTR;
 
 /** Determines whether the given set is empty. */
-bool set_empty(struct Set set) PURE;
+bool set_empty(struct Set set) PURE_ATTR;

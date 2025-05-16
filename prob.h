@@ -49,7 +49,7 @@ void pp_free(struct PatternProb pp);
 	@param num A result
 	@returns P(x from p = num), i.e. p(num)
 */
-double probof(struct Prob p, signed int num) PURE;
+double probof(struct Prob p, signed int num) PURE_ATTR;
 
 /** Partitions a probability function by a pattern.
 	Determines how likely a probability function will hit a pattern. (!) May return an empty probability function
@@ -62,10 +62,10 @@ struct Prob pt_probs(struct PatternProb pt, struct Prob *p);
 /** Determines the probability of a pattern capturing a value
 	@param p The probability function that `v` was picked from
  */
-double pt_hit(struct PatternProb pt, const struct Prob *p, int v) PURE;
+double pt_hit(struct PatternProb pt, const struct Prob *p, int v) PURE_ATTR;
 
 /** Creates a uniform distribution of the range 1..n (inclusive), or n..-1 if n < 0. */
-struct Prob p_uniform(int n) PURE;
+struct Prob p_uniform(int n) PURE_ATTR;
 
 /** Generates the probability function of y = P(-x). In-place. */
 struct Prob p_negs(struct Prob p);
@@ -77,7 +77,7 @@ struct Prob p_dup(struct Prob p);
 struct Prob p_constant(int val);
 
 /** Determines the probability that a result of p is in a set */
-double p_has(struct Prob p, struct Set set) PURE;
+double p_has(struct Prob p, struct Set set) PURE_ATTR;
 
 /** Emulates rolling on p and rerolling once if the value is in the given signed set. In-place. */
 struct Prob p_rerolls(struct Prob p, struct PatternProb pat);

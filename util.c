@@ -8,8 +8,8 @@
 #include <stdlib.h>
 
 
-__attribute__((noreturn))
-__attribute__((format(printf, 1, 2)))
+NORETURN_ATTR
+PRINTF_ATTR(1,2)
 void eprintf(const char *fmt, ...)
 {
 	va_list v;
@@ -117,7 +117,7 @@ double normal(double mu, double sigma, int x)
 	return phi(x + 0.5, mu, sigma) - phi(x - 0.5, mu, sigma);
 }
 
-#define X(f, argsDecl, args, doCheck) __attribute_malloc__ void *x##f argsDecl \
+#define X(f, argsDecl, args, doCheck) MALLOC_ATTR void *x##f argsDecl \
 	{ void *x = f args; if((doCheck) && !x) { perror(#f); exit(EXIT_FAILURE); } return x; }
 
 X(malloc, (size_t siz), (siz), siz)

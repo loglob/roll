@@ -119,7 +119,7 @@ const char *tkstr(char tk)
 }
 
 /** Like _badtk, but accepts strings instead of chars. An empty string encodes the NUL token. */
-static void _badtks(ls_t ls, __attribute__((unused)) const char *func, __attribute__((unused)) int line, const char *first, ...)
+static void _badtks(ls_t ls, UNUSED_ATTR const char *func, UNUSED_ATTR int line, const char *first, ...)
 {
 	va_list vl;
 	va_start(vl, first);
@@ -585,7 +585,7 @@ int _parse_matches(struct Pattern **_patterns, struct Die **_actions, ls_t *ls)
 		count++;
 	} while(!lexm(']'));
 
-	__attribute__((unused))
+	UNUSED_ATTR
 	bool pp = popParen(true);
 	assert(pp);
 
