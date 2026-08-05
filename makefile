@@ -3,6 +3,9 @@ libs := -lm
 
 MAP_OBJ:=$(patsubst %.c,%.o,$(wildcard *.c))
 
+compile_flags.txt:
+	echo "$(CFLAGS)" | tr ' ' '\n' > $@
+
 roll: $(MAP_OBJ)
 	cc $(CFLAGS) $^ $(libs) -o $@
 
