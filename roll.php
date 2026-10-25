@@ -6,7 +6,7 @@
 	<link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAQAAEABAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAzMzMAAAA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAgAgAgAgAiIiIiIiIiIAEBAQEBAQEAAAEBAQEBAAAAAQEBAQEAAAABAQEBAQAAAAABAQEAAAAAAAEBAQAAAAAAAQEBAAAAAAABAQEAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAA//8AAP//AAC22wAAAAEAAKqrAADqrwAA6q8AAOqvAAD6vwAA+r8AAPq/AAD6vwAA/v8AAP//AAD//wAA">
 </head>
 <body>
-<input name="d" id="d" type="text" required style="width: 50%" value="<?php echo $_GET['d'] ?>" />
+<input name="d" id="d" type="text" required style="width: 50%" value="<?php echo htmlspecialchars($_GET['d'] ?? '') ?>" />
 <script>
 	const d = document.getElementById('d')
 	function submit(r) {
@@ -26,18 +26,19 @@
 <br/>
 <?php
 	if(!isset($_GET['d']) || $_GET['d'] === '') {
-		$command = "./roll -h";
+		$command = ['./roll', '-h'];
+	} else if(isset($_GET['r'])) {
+		$command = ['./roll', '-v', $_GET['d']];
 	} else {
-		$die = escapeshellarg($_GET['d']);
-		if(isset($_GET['r'])) {
-			$command = "./roll -v $die";
-		} else {
-			$command = "./roll -p $die";
-		}
+		$command = ['./roll', '-p', $_GET['d']];
 	}
-	echo "$command";
-	$output = shell_exec("$command 2>&1");
-	echo "<pre style=\"font-size: 120%;\">$output</pre>";
+	echo htmlspecialchars(implode(' ', $command));
+	// passing an array bypasses the shell; stderr is merged into stdout like 2>&1
+	$proc = proc_open($command, [1 => ['pipe', 'w'], 2 => ['redirect', 1]], $pipes);
+	$output = stream_get_contents($pipes[1]);
+	fclose($pipes[1]);
+	proc_close($proc);
+	echo '<pre style="font-size: 120%;">' . htmlspecialchars($output) . '</pre>';
 ?>
 <footer style="color: rgb(178, 172, 162); margin-top: 3em; font-size: 75%;">
 	roll is provided under the GPL-3.0 license without warranty. Source code is available <a href="https://github.com/loglob/roll">here</a>.
