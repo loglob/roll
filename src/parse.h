@@ -1,7 +1,7 @@
 // parse.h: Defines the interface to the parser
 #pragma once
 
-extern const char *languageReference;
+extern const char languageReference[];
 
 /** A human-readable string representation of the given token.
 	NOT reentrant.

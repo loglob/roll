@@ -75,7 +75,7 @@ die := n
 
 #define SPECIAL OPS ",();]"
 
-const char *languageReference = 
+const char languageReference[] = 
 	"Dice:\n"
 	" A die is represented by the language:\n"
 	"	n d m  Expands to 'n x d m'.\n"

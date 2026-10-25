@@ -1,0 +1,6 @@
+-std=c2x
+-Wall
+-Wextra
+-Isrc
+-lm
+-fpic
