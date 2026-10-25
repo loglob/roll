@@ -3,7 +3,7 @@ EXE=roll
 # cflags needed for every build
 CFLAGS ?= $(shell cat compile_flags.txt)
 # linker flags needed for every build
-LDFLAGS ?=
+LDFLAGS ?= -lm
 
 CFLAGS += -MMD # generate .d files
 # cflags needed only for release builds
@@ -11,7 +11,7 @@ OPT_CFLAGS ?= -O3 -march=native -mtune=native -flto
 OPT_CFLAGS += $(CFLAGS)
 
 # Look for source files that have both header and code files
-OBJECT_SRC = $(filter $(patsubst %.h,%.c,$(wildcard ./src/*.h)),$(wildcard ./src/*.c))
+OBJECT_SRC = $(filter $(patsubst %.h,%.c,$(wildcard src/*.h)),$(wildcard src/*.c))
 # object files to generate. Discover via headers to avoid main() clash
 OBJECTS = $(patsubst src/%.c, out/%.o, $(OBJECT_SRC))
 
